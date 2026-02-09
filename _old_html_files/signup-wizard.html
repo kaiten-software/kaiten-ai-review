@@ -1,0 +1,409 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sign Up - Super AI Review</title>
+    <style>
+        body {
+            font-family: Arial;
+            margin: 0;
+            background: #f5f5f5;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            min-height: 100vh;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+
+        .progress-bar {
+            display: flex;
+            justify-content: space-between;
+            padding: 30px;
+            background: #fafafa;
+        }
+
+        .step {
+            flex: 1;
+            text-align: center;
+            position: relative;
+        }
+
+        .step-number {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: #ddd;
+            color: white;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+        }
+
+        .step.active .step-number {
+            background: #667eea;
+        }
+
+        .step.completed .step-number {
+            background: #4CAF50;
+        }
+
+        .step-label {
+            margin-top: 10px;
+            font-size: 12px;
+        }
+
+        .form-section {
+            padding: 40px;
+        }
+
+        .form-section h2 {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            font-weight: bold;
+            margin-top: 15px;
+        }
+
+        input,
+        textarea,
+        select {
+            width: 100%;
+            padding: 10px;
+            margin: 5px 0;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-size: 14px;
+        }
+
+        button {
+            padding: 12px 30px;
+            margin: 10px 5px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+
+        .btn-primary {
+            background: #667eea;
+            color: white;
+        }
+
+        .btn-secondary {
+            background: #ddd;
+            color: #333;
+        }
+
+        .item-list {
+            border: 1px solid #eee;
+            padding: 10px;
+            margin: 10px 0;
+            background: #fafafa;
+            border-radius: 5px;
+        }
+
+        .item-list input {
+            margin-bottom: 10px;
+        }
+
+        .add-btn {
+            background: #4CAF50;
+            color: white;
+            padding: 8px 20px;
+            font-size: 14px;
+        }
+
+        .remove-btn {
+            background: #f44336;
+            color: white;
+            padding: 5px 15px;
+            font-size: 12px;
+        }
+
+        .hidden {
+            display: none;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Welcome to Super AI Review</h1>
+            <p>Let's get your business set up in 5 easy steps</p>
+        </div>
+
+        <div class="progress-bar">
+            <div class="step active" id="step-indicator-1">
+                <div class="step-number">1</div>
+                <div class="step-label">Account</div>
+            </div>
+            <div class="step" id="step-indicator-2">
+                <div class="step-number">2</div>
+                <div class="step-label">Business</div>
+            </div>
+            <div class="step" id="step-indicator-3">
+                <div class="step-number">3</div>
+                <div class="step-label">Services</div>
+            </div>
+            <div class="step" id="step-indicator-4">
+                <div class="step-number">4</div>
+                <div class="step-label">Staff</div>
+            </div>
+            <div class="step" id="step-indicator-5">
+                <div class="step-number">5</div>
+                <div class="step-label">Payment</div>
+            </div>
+        </div>
+
+        <!-- Step 1: Account Info -->
+        <div class="form-section" id="step1">
+            <h2>Step 1: Create Your Account</h2>
+            <label>Full Name *</label>
+            <input type="text" id="ownerName" placeholder="Your full name" required>
+
+            <label>Email Address *</label>
+            <input type="email" id="email" placeholder="your@email.com" required>
+
+            <label>Phone Number *</label>
+            <input type="tel" id="phone" placeholder="+91 98765 43210" required>
+
+            <label>Password *</label>
+            <input type="password" id="password" placeholder="Create a strong password" required>
+
+            <div style="margin-top: 30px;">
+                <button class="btn-primary" onclick="nextStep(2)">Next: Business Details →</button>
+            </div>
+        </div>
+
+        <!-- Step 2: Business Info -->
+        <div class="form-section hidden" id="step2">
+            <h2>Step 2: Business Information</h2>
+            <label>Business Name *</label>
+            <input type="text" id="businessName" placeholder="e.g., Raj's Salon">
+
+            <label>Business Type *</label>
+            <select id="businessType">
+                <option value="">Select Type</option>
+                <option value="salon">Salon/Spa</option>
+                <option value="restaurant">Restaurant/Cafe</option>
+                <option value="retail">Retail Store</option>
+                <option value="healthcare">Healthcare</option>
+                <option value="fitness">Fitness/Gym</option>
+                <option value="other">Other</option>
+            </select>
+
+            <label>Business Address *</label>
+            <textarea id="address" rows="3" placeholder="Full business address"></textarea>
+
+            <label>Upload Logo</label>
+            <input type="file" id="logo" accept="image/*">
+
+            <label>Upload Business Photos</label>
+            <input type="file" id="photos" accept="image/*" multiple>
+
+            <label>Google Business Profile URL *</label>
+            <input type="url" id="googleUrl" placeholder="https://g.page/your-business">
+
+            <div style="margin-top: 30px;">
+                <button class="btn-secondary" onclick="prevStep(1)">← Back</button>
+                <button class="btn-primary" onclick="nextStep(3)">Next: Services →</button>
+            </div>
+        </div>
+
+        <!-- Step 3: Services -->
+        <div class="form-section hidden" id="step3">
+            <h2>Step 3: Add Your Services</h2>
+            <p>Add all services your business provides</p>
+
+            <div id="servicesList">
+                <div class="item-list">
+                    <label>Service Name *</label>
+                    <input type="text" placeholder="e.g., Haircut, Massage, Pizza">
+                    <label>Quality Descriptors (comma separated)</label>
+                    <input type="text" placeholder="e.g., Beautiful, Professional, Amazing">
+                    <label>Feeling Descriptors (comma separated)</label>
+                    <input type="text" placeholder="e.g., Confident, Relaxed, Happy">
+                </div>
+            </div>
+
+            <button class="add-btn" onclick="addService()">+ Add Another Service</button>
+
+            <div style="margin-top: 30px;">
+                <button class="btn-secondary" onclick="prevStep(2)">← Back</button>
+                <button class="btn-primary" onclick="nextStep(4)">Next: Staff Members →</button>
+            </div>
+        </div>
+
+        <!-- Step 4: Staff -->
+        <div class="form-section hidden" id="step4">
+            <h2>Step 4: Add Your Staff Members</h2>
+            <p>Add people who provide services to customers</p>
+
+            <div id="staffList">
+                <div class="item-list">
+                    <label>Staff Name *</label>
+                    <input type="text" placeholder="e.g., Mohan, Sarah">
+                    <label>Services They Provide</label>
+                    <input type="text" placeholder="e.g., Haircut, Styling">
+                    <label>Staff Photo (Optional)</label>
+                    <input type="file" accept="image/*">
+                </div>
+            </div>
+
+            <button class="add-btn" onclick="addStaff()">+ Add Another Staff Member</button>
+
+            <div style="margin-top: 30px;">
+                <button class="btn-secondary" onclick="prevStep(3)">← Back</button>
+                <button class="btn-primary" onclick="nextStep(5)">Next: Choose Plan & Pay →</button>
+            </div>
+        </div>
+
+        <!-- Step 5: Payment -->
+        <div class="form-section hidden" id="step5">
+            <h2>Step 5: Choose Your Plan & Complete Payment</h2>
+
+            <label>Select Subscription Plan *</label>
+            <select id="planSelect" onchange="updatePrice()">
+                <option value="monthly">Monthly - ₹100/month</option>
+                <option value="annual">Annual - ₹1,000/year (Save ₹200)</option>
+                <option value="3year">3-Year Plan - ₹2,500 (Save ₹1,100)</option>
+            </select>
+
+            <div style="background: #e8f5e9; padding: 20px; margin: 20px 0; border-radius: 5px;">
+                <h3>Payment Summary</h3>
+                <p><strong>Plan:</strong> <span id="selectedPlan">Monthly</span></p>
+                <p><strong>Amount:</strong> <span id="amount">₹100</span></p>
+                <p><strong>Valid Until:</strong> <span id="validUntil">06-Mar-2026</span></p>
+                <p style="color: green; font-weight: bold;" id="savings"></p>
+            </div>
+
+            <h3>Payment Method</h3>
+            <label>Payment Mode *</label>
+            <select id="paymentMode">
+                <option value="upi">UPI</option>
+                <option value="card">Credit/Debit Card</option>
+                <option value="netbanking">Net Banking</option>
+                <option value="wallet">Wallet</option>
+            </select>
+
+            <label>UPI ID / Card Number / Account Details *</label>
+            <input type="text" id="paymentDetails" placeholder="Enter payment details">
+
+            <div style="margin-top: 30px;">
+                <button class="btn-secondary" onclick="prevStep(4)">← Back</button>
+                <button class="btn-primary" onclick="completeSignup()" style="background: #4CAF50;">Complete Payment &
+                    Activate Account</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentStep = 1;
+
+        function nextStep(step) {
+            document.getElementById('step' + currentStep).classList.add('hidden');
+            document.getElementById('step-indicator-' + currentStep).classList.remove('active');
+            document.getElementById('step-indicator-' + currentStep).classList.add('completed');
+
+            currentStep = step;
+            document.getElementById('step' + currentStep).classList.remove('hidden');
+            document.getElementById('step-indicator-' + currentStep).classList.add('active');
+        }
+
+        function prevStep(step) {
+            document.getElementById('step' + currentStep).classList.add('hidden');
+            document.getElementById('step-indicator-' + currentStep).classList.remove('active');
+
+            currentStep = step;
+            document.getElementById('step' + currentStep).classList.remove('hidden');
+            document.getElementById('step-indicator-' + currentStep).classList.add('active');
+            document.getElementById('step-indicator-' + currentStep).classList.remove('completed');
+        }
+
+        function addService() {
+            const servicesList = document.getElementById('servicesList');
+            const newService = document.createElement('div');
+            newService.className = 'item-list';
+            newService.innerHTML = `
+                <label>Service Name *</label>
+                <input type="text" placeholder="e.g., Haircut, Massage, Pizza">
+                <label>Quality Descriptors (comma separated)</label>
+                <input type="text" placeholder="e.g., Beautiful, Professional, Amazing">
+                <label>Feeling Descriptors (comma separated)</label>
+                <input type="text" placeholder="e.g., Confident, Relaxed, Happy">
+                <button class="remove-btn" onclick="this.parentElement.remove()">Remove</button>
+            `;
+            servicesList.appendChild(newService);
+        }
+
+        function addStaff() {
+            const staffList = document.getElementById('staffList');
+            const newStaff = document.createElement('div');
+            newStaff.className = 'item-list';
+            newStaff.innerHTML = `
+                <label>Staff Name *</label>
+                <input type="text" placeholder="e.g., Mohan, Sarah">
+                <label>Services They Provide</label>
+                <input type="text" placeholder="e.g., Haircut, Styling">
+                <label>Staff Photo (Optional)</label>
+                <input type="file" accept="image/*">
+                <button class="remove-btn" onclick="this.parentElement.remove()">Remove</button>
+            `;
+            staffList.appendChild(newStaff);
+        }
+
+        function updatePrice() {
+            const plan = document.getElementById('planSelect').value;
+            const planNames = {
+                'monthly': 'Monthly',
+                'annual': 'Annual',
+                '3year': '3-Year Plan'
+            };
+            const amounts = {
+                'monthly': '₹100',
+                'annual': '₹1,000',
+                '3year': '₹2,500'
+            };
+            const savings = {
+                'monthly': '',
+                'annual': 'You save ₹200!',
+                '3year': 'You save ₹1,100!'
+            };
+            const validDates = {
+                'monthly': new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toLocaleDateString('en-GB'),
+                'annual': new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toLocaleDateString('en-GB'),
+                '3year': new Date(Date.now() + 3 * 365 * 24 * 60 * 60 * 1000).toLocaleDateString('en-GB')
+            };
+
+            document.getElementById('selectedPlan').textContent = planNames[plan];
+            document.getElementById('amount').textContent = amounts[plan];
+            document.getElementById('validUntil').textContent = validDates[plan];
+            document.getElementById('savings').textContent = savings[plan];
+        }
+
+        function completeSignup() {
+            alert('Payment Successful! 🎉\n\nYour account has been activated.\nRedirecting to your dashboard...');
+            window.location.href = 'dashboard.html';
+        }
+
+        // Initialize
+        updatePrice();
+    </script>
+</body>
+
+</html>

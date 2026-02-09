@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Private Feedback - Super AI Review</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 700px;
+            width: 100%;
+        }
+
+        .feedback-card {
+            background: white;
+            border-radius: 25px;
+            padding: 50px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            animation: slideUp 0.6s ease-out;
+        }
+
+        @keyframes slideUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .icon-header {
+            text-align: center;
+            margin-bottom: 35px;
+        }
+
+        .icon-circle {
+            width: 100px;
+            height: 100px;
+            margin: 0 auto 25px;
+            background: linear-gradient(135deg, #ff9a9e 0%, #fad0c4 100%);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 56px;
+        }
+
+        .icon-header h1 {
+            font-size: 32px;
+            font-weight: 800;
+            color: #333;
+            margin-bottom: 15px;
+        }
+
+        .icon-header p {
+            font-size: 18px;
+            color: #666;
+            line-height: 1.6;
+        }
+
+        .business-info {
+            background: linear-gradient(135deg, #f8f9ff 0%, #fff 100%);
+            padding: 25px;
+            border-radius: 20px;
+            margin-bottom: 30px;
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+
+        .business-logo {
+            font-size: 56px;
+            width: 70px;
+            height: 70px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08);
+        }
+
+        .business-name {
+            font-size: 24px;
+            font-weight: 800;
+            color: #333;
+        }
+
+        .form-section {
+            margin-bottom: 25px;
+        }
+
+        .form-label {
+            font-size: 15px;
+            font-weight: 700;
+            color: #333;
+            margin-bottom: 12px;
+            display: block;
+        }
+
+        textarea {
+            width: 100%;
+            padding: 18px 20px;
+            border: 2px solid #e0e0e0;
+            border-radius: 15px;
+            font-size: 16px;
+            font-family: 'Inter', sans-serif;
+            transition: all 0.3s;
+            resize: vertical;
+            min-height: 150px;
+        }
+
+        textarea:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.1);
+        }
+
+        .submit-btn {
+            width: 100%;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 15px;
+            font-size: 18px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.3s;
+            box-shadow: 0 8px 25px rgba(102, 126, 234, 0.3);
+        }
+
+        .submit-btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 12px 35px rgba(102, 126, 234, 0.5);
+        }
+
+        .info-box {
+            background: linear-gradient(135deg, #f8f9ff 0%, #fff 100%);
+            padding: 20px;
+            border-radius: 15px;
+            margin-top: 25px;
+            border-left: 4px solid #667eea;
+        }
+
+        .info-box p {
+            font-size: 14px;
+            color: #666;
+            line-height: 1.6;
+        }
+
+        .info-box strong {
+            color: #667eea;
+        }
+
+        @media (max-width: 768px) {
+            .feedback-card {
+                padding: 30px 25px;
+            }
+
+            .icon-header h1 {
+                font-size: 28px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <div class="feedback-card">
+            <div class="icon-header">
+                <div class="icon-circle">💬</div>
+                <h1>We Value Your Feedback</h1>
+                <p>Thank you for sharing your experience. Your feedback helps us improve our service.</p>
+            </div>
+
+            <div class="business-info">
+                <div class="business-logo" id="businessLogo">⭐</div>
+                <div class="business-name" id="businessName">Business Name</div>
+            </div>
+
+            <form id="feedbackForm">
+                <div class="form-section">
+                    <label class="form-label">What could we have done better?</label>
+                    <textarea id="feedbackText"
+                        placeholder="Please share your honest feedback. This will be sent privately to the business owner and will help them improve their service..."
+                        required></textarea>
+                </div>
+
+                <button type="submit" class="submit-btn">📤 Submit Private Feedback</button>
+            </form>
+
+            <div class="info-box">
+                <p><strong>🔒 Your privacy is protected:</strong> This feedback will be sent directly and privately to
+                    the business owner. It will NOT be posted publicly.</p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Get feedback data from sessionStorage
+        const feedbackData = JSON.parse(sessionStorage.getItem('privateFeedback') || '{}');
+
+        // Business database
+        const businesses = {
+            'raj-salon': { name: "Raj's Salon", logo: "💇" },
+            'spa-paradise': { name: "Spa Paradise", logo: "🧖" },
+            'pizza-corner': { name: "Pizza Corner", logo: "🍕" },
+            'fitness-hub': { name: "Fitness Hub", logo: "💪" },
+            'beauty-lounge': { name: "Beauty Lounge", logo: "💄" }
+        };
+
+        const business = businesses[feedbackData.businessId] || businesses['raj-salon'];
+
+        // Display business info
+        document.getElementById('businessLogo').textContent = business.logo;
+        document.getElementById('businessName').textContent = business.name;
+
+        // Form submission
+        document.getElementById('feedbackForm').addEventListener('submit', function (e) {
+            e.preventDefault();
+
+            const feedback = document.getElementById('feedbackText').value;
+
+            // In production, this would send to backend
+            console.log('Private Feedback:', {
+                business: business.name,
+                rating: feedbackData.rating,
+                service: feedbackData.service,
+                staff: feedbackData.staff,
+                feedback: feedback
+            });
+
+            // Show success and redirect
+            alert('✓ Thank you! Your feedback has been sent privately to ' + business.name);
+
+            // Redirect back to review page or home
+            if (feedbackData.businessId) {
+                window.location.href = `client-page-dynamic.html?business=${feedbackData.businessId}`;
+            } else {
+                window.location.href = 'business-demo.html';
+            }
+        });
+    </script>
+</body>
+
+</html>

@@ -1,0 +1,503 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FAQ & Help - Super AI Review</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: Arial;
+            line-height: 1.6;
+        }
+
+        .nav {
+            background: white;
+            padding: 20px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+        }
+
+        .nav-content {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .logo {
+            font-size: 24px;
+            font-weight: bold;
+            color: #667eea;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 40px auto;
+            padding: 20px;
+        }
+
+        h1 {
+            color: #667eea;
+            margin-bottom: 30px;
+            text-align: center;
+        }
+
+        .search-box {
+            width: 100%;
+            padding: 15px;
+            font-size: 16px;
+            border: 2px solid #667eea;
+            border-radius: 5px;
+            margin-bottom: 30px;
+        }
+
+        .category {
+            margin-bottom: 40px;
+        }
+
+        .category h2 {
+            color: #333;
+            margin-bottom: 20px;
+            border-bottom: 2px solid #667eea;
+            padding-bottom: 10px;
+        }
+
+        .faq-item {
+            margin-bottom: 20px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            overflow: hidden;
+        }
+
+        .faq-question {
+            background: #f8f9fa;
+            padding: 15px;
+            cursor: pointer;
+            font-weight: bold;
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .faq-question:hover {
+            background: #e9ecef;
+        }
+
+        .faq-answer {
+            padding: 15px;
+            display: none;
+            background: white;
+        }
+
+        .faq-answer.active {
+            display: block;
+        }
+
+        .contact-box {
+            background: #667eea;
+            color: white;
+            padding: 30px;
+            border-radius: 10px;
+            text-align: center;
+            margin-top: 40px;
+        }
+
+        .contact-box h2 {
+            color: white;
+            margin-bottom: 15px;
+        }
+
+        .contact-btn {
+            background: white;
+            color: #667eea;
+            padding: 12px 30px;
+            border: none;
+            border-radius: 5px;
+            font-size: 16px;
+            cursor: pointer;
+            margin: 5px;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="nav">
+        <div class="nav-content">
+            <div class="logo">⭐ Super AI Review</div>
+            <a href="home.html" style="text-decoration: none; color: #333;">← Back to Home</a>
+        </div>
+    </div>
+
+    <div class="container">
+        <h1>❓ Frequently Asked Questions</h1>
+
+        <input type="text" class="search-box" placeholder="🔍 Search for answers..." id="searchBox">
+
+        <div class="category">
+            <h2>🚀 Getting Started</h2>
+
+            <div class="faq-item">
+                <div class="faq-question" onclick="toggleAnswer(this)">
+                    How do I get started with Super AI Review?
+                    <span>+</span>
+                </div>
+                <div class="faq-answer">
+                    Click "Get Onboarded Now" on the homepage, complete the signup wizard (5 steps), choose your
+                    subscription plan, and make payment. You'll receive a welcome email with your QR code and dashboard
+                    access within minutes.
+                </div>
+            </div>
+
+            <div class="faq-item">
+                <div class="faq-question" onclick="toggleAnswer(this)">
+                    What information do I need to provide during onboarding?
+                    <span>+</span>
+                </div>
+                <div class="faq-answer">
+                    You'll need: Business name, address, contact details, logo (optional), photos of your establishment,
+                    list of services you offer, staff member names, and your Google Business Profile URL.
+                </div>
+            </div>
+
+            <div class="faq-item">
+                <div class="faq-question" onclick="toggleAnswer(this)">
+                    How long does onboarding take?
+                    <span>+</span>
+                </div>
+                <div class="faq-answer">
+                    Most businesses complete onboarding in 5-10 minutes. You can save your progress and return later if
+                    needed.
+                </div>
+            </div>
+        </div>
+
+        <div class="category">
+            <h2>📱 QR Codes & Review Collection</h2>
+
+            <div class="faq-item">
+                <div class="faq-question" onclick="toggleAnswer(this)">
+                    How do I get my QR code?
+                    <span>+</span>
+                </div>
+                <div class="faq-answer">
+                    After onboarding, go to your dashboard and click "Download QR Code". You can print it or display it
+                    digitally at your business location.
+                </div>
+            </div>
+
+            <div class="faq-item">
+                <div class="faq-question" onclick="toggleAnswer(this)">
+                    Where should I place the QR code?
+                    <span>+</span>
+                </div>
+                <div class="faq-answer">
+                    Best locations: Reception desk, checkout counter, table tents, receipts, business cards, or near the
+                    exit. Make sure it's visible and accessible to customers.
+                </div>
+            </div>
+
+            <div class="faq-item">
+                <div class="faq-question" onclick="toggleAnswer(this)">
+                    Can I have multiple QR codes for different locations?
+                    <span>+</span>
+                </div>
+                <div class="faq-answer">
+                    Yes! With multi-location support, you can create separate QR codes for each location and track
+                    reviews separately. This feature is available on Pro and Enterprise plans.
+                </div>
+            </div>
+
+            <div class="faq-item">
+                <div class="faq-question" onclick="toggleAnswer(this)">
+                    What happens when a customer scans the QR code?
+                    <span>+</span>
+                </div>
+                <div class="faq-answer">
+                    They're taken to a mobile-friendly review page showing your branding. They select the service
+                    received, quality attributes, how it made them feel, and which staff member served them. Our AI then
+                    generates a professional review.
+                </div>
+            </div>
+        </div>
+
+        <div class="category">
+            <h2>🤖 AI Review Generation</h2>
+
+            <div class="faq-item">
+                <div class="faq-question" onclick="toggleAnswer(this)">
+                    How does AI review generation work?
+                    <span>+</span>
+                </div>
+                <div class="faq-answer">
+                    When a customer submits their feedback, we send their selections (service, quality, feelings, staff)
+                    to ChatGPT, which generates a natural, authentic-sounding review. The customer can then copy and
+                    post it to Google.
+                </div>
+            </div>
+
+            <div class="faq-item">
+                <div class="faq-question" onclick="toggleAnswer(this)">
+                    Are AI-generated reviews compliant with Google's policies?
+                    <span>+</span>
+                </div>
+                <div class="faq-answer">
+                    Yes, when used correctly. The reviews are based on genuine customer experiences. The AI simply helps
+                    customers articulate their thoughts better. However, you must ensure reviews come from real
+                    customers who actually used your services.
+                </div>
+            </div>
+
+            <div class="faq-item">
+                <div class="faq-question" onclick="toggleAnswer(this)">
+                    What if a customer gives a low rating?
+                    <span>+</span>
+                </div>
+                <div class="faq-answer">
+                    If a customer selects less than 3 stars, we DON'T generate a public review. Instead, we send the
+                    feedback privately to you via email so you can address the issue internally. This protects your
+                    online reputation.
+                </div>
+            </div>
+
+            <div class="faq-item">
+                <div class="faq-question" onclick="toggleAnswer(this)">
+                    Can customers edit the AI-generated review?
+                    <span>+</span>
+                </div>
+                <div class="faq-answer">
+                    Yes! Customers can add their own comments during the review process, and they can edit the
+                    AI-generated text before posting to Google.
+                </div>
+            </div>
+        </div>
+
+        <div class="category">
+            <h2>💳 Pricing & Payments</h2>
+
+            <div class="faq-item">
+                <div class="faq-question" onclick="toggleAnswer(this)">
+                    What are the pricing plans?
+                    <span>+</span>
+                </div>
+                <div class="faq-answer">
+                    Monthly: ₹100/month | Annual: ₹1,000/year (save ₹200) | 3-Year: ₹2,500 (save ₹1,100). All plans
+                    include unlimited reviews, QR codes, AI generation, and analytics.
+                </div>
+            </div>
+
+            <div class="faq-item">
+                <div class="faq-question" onclick="toggleAnswer(this)">
+                    Is there a free trial?
+                    <span>+</span>
+                </div>
+                <div class="faq-answer">
+                    Yes! We offer a 7-day money-back guarantee. If you're not satisfied, request a full refund within 7
+                    days of signup.
+                </div>
+            </div>
+
+            <div class="faq-item">
+                <div class="faq-question" onclick="toggleAnswer(this)">
+                    What payment methods do you accept?
+                    <span>+</span>
+                </div>
+                <div class="faq-answer">
+                    We accept credit/debit cards, UPI, net banking, and digital wallets through our secure payment
+                    gateway.
+                </div>
+            </div>
+
+            <div class="faq-item">
+                <div class="faq-question" onclick="toggleAnswer(this)">
+                    Can I cancel my subscription?
+                    <span>+</span>
+                </div>
+                <div class="faq-answer">
+                    Yes, you can cancel anytime from your dashboard. You'll retain access until the end of your current
+                    billing period. No refunds for unused time.
+                </div>
+            </div>
+
+            <div class="faq-item">
+                <div class="faq-question" onclick="toggleAnswer(this)">
+                    Do you provide invoices?
+                    <span>+</span>
+                </div>
+                <div class="faq-answer">
+                    Yes! GST invoices are automatically generated and emailed after each payment. You can also download
+                    them from your dashboard.
+                </div>
+            </div>
+        </div>
+
+        <div class="category">
+            <h2>📊 Dashboard & Analytics</h2>
+
+            <div class="faq-item">
+                <div class="faq-question" onclick="toggleAnswer(this)">
+                    What analytics do I get?
+                    <span>+</span>
+                </div>
+                <div class="faq-answer">
+                    You can track: total reviews generated, reviews per month, most popular services, top-rated staff
+                    members, QR code scans, and review trends over time.
+                </div>
+            </div>
+
+            <div class="faq-item">
+                <div class="faq-question" onclick="toggleAnswer(this)">
+                    Can I see all the reviews my customers generated?
+                    <span>+</span>
+                </div>
+                <div class="faq-answer">
+                    Yes! Your dashboard has a "Review History" section showing all generated reviews with filters by
+                    date, service, and staff member. You can export to CSV.
+                </div>
+            </div>
+
+            <div class="faq-item">
+                <div class="faq-question" onclick="toggleAnswer(this)">
+                    Can I track which staff members get the most reviews?
+                    <span>+</span>
+                </div>
+                <div class="faq-answer">
+                    Absolutely! The Staff Performance section shows a leaderboard of your team members with review
+                    counts and average ratings.
+                </div>
+            </div>
+        </div>
+
+        <div class="category">
+            <h2>🔧 Customization</h2>
+
+            <div class="faq-item">
+                <div class="faq-question" onclick="toggleAnswer(this)">
+                    Can I customize the review page with my branding?
+                    <span>+</span>
+                </div>
+                <div class="faq-answer">
+                    Yes! You can upload your logo, choose brand colors, and customize the thank-you message. White-label
+                    options (removing our branding) are available on Enterprise plans.
+                </div>
+            </div>
+
+            <div class="faq-item">
+                <div class="faq-question" onclick="toggleAnswer(this)">
+                    Can I add or remove services after onboarding?
+                    <span>+</span>
+                </div>
+                <div class="faq-answer">
+                    Yes! Go to your dashboard → Edit Business → Services. You can add, edit, or remove services and
+                    staff members anytime.
+                </div>
+            </div>
+        </div>
+
+        <div class="category">
+            <h2>🛡️ Security & Compliance</h2>
+
+            <div class="faq-item">
+                <div class="faq-question" onclick="toggleAnswer(this)">
+                    Is my data secure?
+                    <span>+</span>
+                </div>
+                <div class="faq-answer">
+                    Yes! We use SSL encryption, secure servers, and follow industry best practices. Your payment
+                    information is processed through PCI-compliant gateways.
+                </div>
+            </div>
+
+            <div class="faq-item">
+                <div class="faq-question" onclick="toggleAnswer(this)">
+                    How do you prevent fake reviews?
+                    <span>+</span>
+                </div>
+                <div class="faq-answer">
+                    We implement rate limiting (max 10 reviews/day per location), IP tracking, and cooldown periods
+                    (same customer can't review again for 7 days). This prevents abuse.
+                </div>
+            </div>
+
+            <div class="faq-item">
+                <div class="faq-question" onclick="toggleAnswer(this)">
+                    Can I export my data?
+                    <span>+</span>
+                </div>
+                <div class="faq-answer">
+                    Yes! You can export all your reviews, customer data, and analytics to CSV format from your
+                    dashboard.
+                </div>
+            </div>
+        </div>
+
+        <div class="category">
+            <h2>🎁 Referrals & Discounts</h2>
+
+            <div class="faq-item">
+                <div class="faq-question" onclick="toggleAnswer(this)">
+                    Do you have a referral program?
+                    <span>+</span>
+                </div>
+                <div class="faq-answer">
+                    Yes! Refer a business and get 1 month free when they subscribe. Find your unique referral link in
+                    your dashboard.
+                </div>
+            </div>
+
+            <div class="faq-item">
+                <div class="faq-question" onclick="toggleAnswer(this)">
+                    Are there discounts for multiple locations?
+                    <span>+</span>
+                </div>
+                <div class="faq-answer">
+                    Yes! Contact us for custom pricing if you have 5+ locations. We offer volume discounts for chains
+                    and franchises.
+                </div>
+            </div>
+        </div>
+
+        <div class="contact-box">
+            <h2>Still Have Questions?</h2>
+            <p>Our support team is here to help!</p>
+            <button class="contact-btn" onclick="location.href='mailto:support@superaireview.com'">📧 Email
+                Support</button>
+            <button class="contact-btn" onclick="alert('WhatsApp: +91-XXXXXXXXXX')">💬 WhatsApp</button>
+            <button class="contact-btn" onclick="alert('Phone: +91-XXXXXXXXXX')">📞 Call Us</button>
+        </div>
+    </div>
+
+    <script>
+        function toggleAnswer(element) {
+            const answer = element.nextElementSibling;
+            const icon = element.querySelector('span');
+
+            answer.classList.toggle('active');
+            icon.textContent = answer.classList.contains('active') ? '−' : '+';
+        }
+
+        // Search functionality
+        document.getElementById('searchBox').addEventListener('input', function (e) {
+            const searchTerm = e.target.value.toLowerCase();
+            const faqItems = document.querySelectorAll('.faq-item');
+
+            faqItems.forEach(item => {
+                const question = item.querySelector('.faq-question').textContent.toLowerCase();
+                const answer = item.querySelector('.faq-answer').textContent.toLowerCase();
+
+                if (question.includes(searchTerm) || answer.includes(searchTerm)) {
+                    item.style.display = 'block';
+                } else {
+                    item.style.display = 'none';
+                }
+            });
+        });
+    </script>
+</body>
+
+</html>

@@ -1,0 +1,425 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Staff Performance - Super AI Review</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: Arial;
+            background: #f5f5f5;
+        }
+
+        .nav {
+            background: white;
+            padding: 20px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+        }
+
+        .nav-content {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .logo {
+            font-size: 24px;
+            font-weight: bold;
+            color: #667eea;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 40px auto;
+            padding: 20px;
+        }
+
+        .header {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+        }
+
+        .leaderboard {
+            background: white;
+            border-radius: 10px;
+            padding: 30px;
+            margin-bottom: 20px;
+        }
+
+        .podium {
+            display: flex;
+            justify-content: center;
+            align-items: flex-end;
+            gap: 20px;
+            margin-bottom: 40px;
+        }
+
+        .podium-item {
+            text-align: center;
+        }
+
+        .podium-item.first {
+            order: 2;
+        }
+
+        .podium-item.second {
+            order: 1;
+        }
+
+        .podium-item.third {
+            order: 3;
+        }
+
+        .podium-box {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px 20px;
+            border-radius: 10px;
+            position: relative;
+        }
+
+        .podium-box.first {
+            height: 200px;
+        }
+
+        .podium-box.second {
+            height: 160px;
+        }
+
+        .podium-box.third {
+            height: 140px;
+        }
+
+        .medal {
+            font-size: 48px;
+            margin-bottom: 10px;
+        }
+
+        .podium-name {
+            font-size: 18px;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+
+        .podium-stats {
+            font-size: 14px;
+        }
+
+        .staff-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .staff-table th {
+            background: #f8f9fa;
+            padding: 15px;
+            text-align: left;
+            border-bottom: 2px solid #dee2e6;
+        }
+
+        .staff-table td {
+            padding: 15px;
+            border-bottom: 1px solid #eee;
+        }
+
+        .staff-table tr:hover {
+            background: #f8f9fa;
+        }
+
+        .avatar {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            background: #667eea;
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 20px;
+        }
+
+        .rating-bar {
+            background: #e9ecef;
+            height: 20px;
+            border-radius: 10px;
+            overflow: hidden;
+        }
+
+        .rating-fill {
+            background: linear-gradient(90deg, #ffc107, #ff9800);
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 12px;
+            font-weight: bold;
+        }
+
+        .trend-up {
+            color: #28a745;
+        }
+
+        .trend-down {
+            color: #dc3545;
+        }
+
+        .filter-bar {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            display: flex;
+            gap: 15px;
+        }
+
+        .filter-bar select {
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            flex: 1;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="nav">
+        <div class="nav-content">
+            <div class="logo">⭐ Super AI Review</div>
+            <a href="dashboard.html" style="text-decoration: none; color: #333;">← Back to Dashboard</a>
+        </div>
+    </div>
+
+    <div class="container">
+        <div class="header">
+            <h1>👥 Staff Performance Tracker</h1>
+            <p>See which team members are getting the most love from customers!</p>
+        </div>
+
+        <div class="filter-bar">
+            <select>
+                <option>This Month</option>
+                <option>Last Month</option>
+                <option>Last 3 Months</option>
+                <option>Last 6 Months</option>
+                <option>This Year</option>
+                <option>All Time</option>
+            </select>
+            <select>
+                <option>All Services</option>
+                <option>Haircut</option>
+                <option>Manicure</option>
+                <option>Facial</option>
+                <option>Massage</option>
+            </select>
+        </div>
+
+        <div class="leaderboard">
+            <h2 style="text-align: center; margin-bottom: 30px;">🏆 Top Performers This Month</h2>
+
+            <div class="podium">
+                <div class="podium-item second">
+                    <div class="podium-box second">
+                        <div class="medal">🥈</div>
+                        <div class="podium-name">Priya</div>
+                        <div class="podium-stats">
+                            <div>38 Reviews</div>
+                            <div>⭐ 4.7</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="podium-item first">
+                    <div class="podium-box first">
+                        <div class="medal">🥇</div>
+                        <div class="podium-name">Mohan</div>
+                        <div class="podium-stats">
+                            <div>52 Reviews</div>
+                            <div>⭐ 4.9</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="podium-item third">
+                    <div class="podium-box third">
+                        <div class="medal">🥉</div>
+                        <div class="podium-name">Raj</div>
+                        <div class="podium-stats">
+                            <div>31 Reviews</div>
+                            <div>⭐ 4.6</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <h3 style="margin: 30px 0 20px 0;">📊 Detailed Performance</h3>
+
+            <table class="staff-table">
+                <thead>
+                    <tr>
+                        <th>Rank</th>
+                        <th>Staff Member</th>
+                        <th>Total Reviews</th>
+                        <th>Avg Rating</th>
+                        <th>Rating Distribution</th>
+                        <th>Most Popular Service</th>
+                        <th>Trend</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><strong>1</strong></td>
+                        <td>
+                            <div style="display: flex; align-items: center; gap: 10px;">
+                                <div class="avatar">M</div>
+                                <div>
+                                    <strong>Mohan Kumar</strong><br>
+                                    <small style="color: #888;">Hair Stylist</small>
+                                </div>
+                            </div>
+                        </td>
+                        <td><strong>52</strong></td>
+                        <td>
+                            <div>⭐ <strong>4.9</strong></div>
+                        </td>
+                        <td>
+                            <div class="rating-bar">
+                                <div class="rating-fill" style="width: 98%;">98%</div>
+                            </div>
+                            <small style="color: #888;">48 five-star reviews</small>
+                        </td>
+                        <td>💇 Haircut (45)</td>
+                        <td><span class="trend-up">↑ 12%</span></td>
+                    </tr>
+
+                    <tr>
+                        <td><strong>2</strong></td>
+                        <td>
+                            <div style="display: flex; align-items: center; gap: 10px;">
+                                <div class="avatar">P</div>
+                                <div>
+                                    <strong>Priya Sharma</strong><br>
+                                    <small style="color: #888;">Nail Technician</small>
+                                </div>
+                            </div>
+                        </td>
+                        <td><strong>38</strong></td>
+                        <td>
+                            <div>⭐ <strong>4.7</strong></div>
+                        </td>
+                        <td>
+                            <div class="rating-bar">
+                                <div class="rating-fill" style="width: 94%;">94%</div>
+                            </div>
+                            <small style="color: #888;">34 five-star reviews</small>
+                        </td>
+                        <td>💅 Manicure (30)</td>
+                        <td><span class="trend-up">↑ 8%</span></td>
+                    </tr>
+
+                    <tr>
+                        <td><strong>3</strong></td>
+                        <td>
+                            <div style="display: flex; align-items: center; gap: 10px;">
+                                <div class="avatar">R</div>
+                                <div>
+                                    <strong>Raj Patel</strong><br>
+                                    <small style="color: #888;">Massage Therapist</small>
+                                </div>
+                            </div>
+                        </td>
+                        <td><strong>31</strong></td>
+                        <td>
+                            <div>⭐ <strong>4.6</strong></div>
+                        </td>
+                        <td>
+                            <div class="rating-bar">
+                                <div class="rating-fill" style="width: 92%;">92%</div>
+                            </div>
+                            <small style="color: #888;">27 five-star reviews</small>
+                        </td>
+                        <td>💆 Massage (22)</td>
+                        <td><span class="trend-up">↑ 5%</span></td>
+                    </tr>
+
+                    <tr>
+                        <td><strong>4</strong></td>
+                        <td>
+                            <div style="display: flex; align-items: center; gap: 10px;">
+                                <div class="avatar">A</div>
+                                <div>
+                                    <strong>Anita Desai</strong><br>
+                                    <small style="color: #888;">Beautician</small>
+                                </div>
+                            </div>
+                        </td>
+                        <td><strong>24</strong></td>
+                        <td>
+                            <div>⭐ <strong>4.5</strong></div>
+                        </td>
+                        <td>
+                            <div class="rating-bar">
+                                <div class="rating-fill" style="width: 90%;">90%</div>
+                            </div>
+                            <small style="color: #888;">20 five-star reviews</small>
+                        </td>
+                        <td>✨ Facial (18)</td>
+                        <td><span class="trend-down">↓ 3%</span></td>
+                    </tr>
+
+                    <tr>
+                        <td><strong>5</strong></td>
+                        <td>
+                            <div style="display: flex; align-items: center; gap: 10px;">
+                                <div class="avatar">S</div>
+                                <div>
+                                    <strong>Suresh Reddy</strong><br>
+                                    <small style="color: #888;">Hair Stylist</small>
+                                </div>
+                            </div>
+                        </td>
+                        <td><strong>19</strong></td>
+                        <td>
+                            <div>⭐ <strong>4.4</strong></div>
+                        </td>
+                        <td>
+                            <div class="rating-bar">
+                                <div class="rating-fill" style="width: 88%;">88%</div>
+                            </div>
+                            <small style="color: #888;">15 five-star reviews</small>
+                        </td>
+                        <td>💇 Haircut (16)</td>
+                        <td><span class="trend-up">↑ 2%</span></td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <div style="background: white; padding: 30px; border-radius: 10px;">
+            <h3>💡 Insights & Recommendations</h3>
+            <ul style="margin-left: 20px; line-height: 2;">
+                <li><strong>Mohan</strong> is your top performer! Consider featuring him in marketing materials.</li>
+                <li><strong>Priya</strong> has excellent customer satisfaction in nail services. Great candidate for
+                    training others.</li>
+                <li><strong>Anita's</strong> performance dipped slightly. Consider a check-in to see if she needs
+                    support.</li>
+                <li>Haircut services are getting the most reviews. Consider expanding this service.</li>
+                <li>Overall team performance is excellent with 93% five-star reviews!</li>
+            </ul>
+        </div>
+    </div>
+</body>
+
+</html>

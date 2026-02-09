@@ -1,0 +1,940 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My Clients - Super AI Review</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;800&display=swap" rel="stylesheet">
+    <script>
+        // Authentication check
+        if (!sessionStorage.getItem('adminLoggedIn')) {
+            window.location.href = 'admin-login.html';
+        }
+    </script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: #f8f9ff;
+            display: flex;
+            min-height: 100vh;
+        }
+
+        /* Sidebar - Same as dashboard */
+        .sidebar {
+            width: 280px;
+            background: linear-gradient(180deg, #1a1a2e 0%, #16213e 100%);
+            color: white;
+            position: fixed;
+            height: 100vh;
+            overflow-y: auto;
+            box-shadow: 4px 0 20px rgba(0, 0, 0, 0.1);
+            z-index: 1000;
+        }
+
+        .sidebar-header {
+            padding: 30px 25px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .logo-container {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 10px;
+        }
+
+        .logo-svg {
+            width: 40px;
+            height: 40px;
+        }
+
+        .logo-text {
+            font-size: 20px;
+            font-weight: 800;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .user-info {
+            margin-top: 20px;
+            padding: 15px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 12px;
+        }
+
+        .user-name {
+            font-weight: 700;
+            font-size: 16px;
+            margin-bottom: 5px;
+        }
+
+        .user-role {
+            font-size: 13px;
+            color: #aaa;
+        }
+
+        .nav-section {
+            padding: 20px 0;
+        }
+
+        .nav-label {
+            padding: 0 25px;
+            font-size: 11px;
+            font-weight: 700;
+            color: #888;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 10px;
+        }
+
+        .nav-item {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            padding: 14px 25px;
+            color: #ccc;
+            text-decoration: none;
+            transition: all 0.3s;
+            border-left: 3px solid transparent;
+            font-weight: 600;
+            font-size: 15px;
+        }
+
+        .nav-item:hover {
+            background: rgba(255, 255, 255, 0.05);
+            color: white;
+            border-left-color: #667eea;
+        }
+
+        .nav-item.active {
+            background: rgba(102, 126, 234, 0.15);
+            color: white;
+            border-left-color: #667eea;
+        }
+
+        .nav-icon {
+            font-size: 20px;
+            width: 24px;
+            text-align: center;
+        }
+
+        /* Main Content */
+        .main-content {
+            margin-left: 280px;
+            flex: 1;
+            padding: 30px 40px;
+        }
+
+        /* Top Bar */
+        .top-bar {
+            background: white;
+            padding: 25px 35px;
+            border-radius: 20px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
+            margin-bottom: 30px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .page-title {
+            font-size: 32px;
+            font-weight: 800;
+            color: #333;
+        }
+
+        .page-subtitle {
+            color: #888;
+            margin-top: 5px;
+            font-size: 15px;
+        }
+
+        .top-actions {
+            display: flex;
+            gap: 15px;
+        }
+
+        .btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 12px;
+            font-weight: 700;
+            font-size: 14px;
+            cursor: pointer;
+            transition: all 0.3s;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-secondary {
+            background: #f5f5f5;
+            color: #333;
+        }
+
+        .btn-secondary:hover {
+            background: #e8e8e8;
+        }
+
+        /* Client Cards Grid */
+        .clients-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(380px, 1fr));
+            gap: 30px;
+        }
+
+        .client-card {
+            background: white;
+            border-radius: 20px;
+            padding: 35px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
+            transition: all 0.4s;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .client-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            right: 0;
+            width: 150px;
+            height: 150px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            opacity: 0.03;
+            border-radius: 50%;
+            transform: translate(40%, -40%);
+        }
+
+        .client-card:hover {
+            transform: translateY(-8px);
+            box-shadow: 0 12px 40px rgba(102, 126, 234, 0.15);
+        }
+
+        .client-header {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            margin-bottom: 25px;
+            padding-bottom: 25px;
+            border-bottom: 2px solid #f5f5f5;
+        }
+
+        .client-logo-big {
+            font-size: 64px;
+            width: 90px;
+            height: 90px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: linear-gradient(135deg, #f8f9ff 0%, #fff 100%);
+            border-radius: 20px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08);
+        }
+
+        .client-title h3 {
+            font-size: 24px;
+            font-weight: 800;
+            color: #333;
+            margin-bottom: 8px;
+        }
+
+        .client-title p {
+            color: #888;
+            font-size: 14px;
+        }
+
+        .client-stats {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 15px;
+            margin: 25px 0;
+        }
+
+        .stat-mini {
+            text-align: center;
+            padding: 15px;
+            background: linear-gradient(135deg, #f8f9ff 0%, #fff 100%);
+            border-radius: 12px;
+        }
+
+        .stat-mini-number {
+            font-size: 28px;
+            font-weight: 800;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 5px;
+        }
+
+        .stat-mini-label {
+            font-size: 12px;
+            color: #888;
+            font-weight: 600;
+        }
+
+        .client-info {
+            margin: 20px 0;
+        }
+
+        .info-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 12px 0;
+            border-bottom: 1px solid #f5f5f5;
+        }
+
+        .info-label {
+            color: #888;
+            font-size: 14px;
+            font-weight: 600;
+        }
+
+        .info-value {
+            color: #333;
+            font-weight: 700;
+            font-size: 14px;
+        }
+
+        .qr-section {
+            margin: 25px 0;
+            padding: 20px;
+            background: linear-gradient(135deg, #f8f9ff 0%, #fff 100%);
+            border-radius: 15px;
+            text-align: center;
+        }
+
+        .qr-label {
+            font-size: 12px;
+            font-weight: 700;
+            color: #667eea;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 15px;
+        }
+
+        .qr-code {
+            width: 180px;
+            height: 180px;
+            margin: 0 auto 15px;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+        }
+
+        .qr-code img {
+            width: 100%;
+            height: 100%;
+        }
+
+        .qr-download {
+            font-size: 13px;
+            color: #667eea;
+            font-weight: 600;
+            cursor: pointer;
+            text-decoration: none;
+        }
+
+        .qr-download:hover {
+            text-decoration: underline;
+        }
+
+        .badge {
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 700;
+            display: inline-block;
+            margin-bottom: 15px;
+        }
+
+        .badge-active {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .badge-expiring {
+            background: #fff3cd;
+            color: #856404;
+        }
+
+        .client-actions {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+        }
+
+        .btn-sm {
+            padding: 10px 20px;
+            font-size: 13px;
+            flex: 1;
+        }
+
+        /* Filters */
+        .filters {
+            background: white;
+            padding: 25px 35px;
+            border-radius: 20px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
+            margin-bottom: 30px;
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+        }
+
+        .search-box {
+            flex: 1;
+            min-width: 250px;
+            position: relative;
+        }
+
+        .search-box input {
+            width: 100%;
+            padding: 12px 20px 12px 45px;
+            border: 2px solid #e8e8e8;
+            border-radius: 12px;
+            font-size: 14px;
+            transition: all 0.3s;
+        }
+
+        .search-box input:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.1);
+        }
+
+        .search-icon {
+            position: absolute;
+            left: 16px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #888;
+        }
+
+        select {
+            padding: 12px 20px;
+            border: 2px solid #e8e8e8;
+            border-radius: 12px;
+            font-size: 14px;
+            font-weight: 600;
+            background: white;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        select:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        /* Responsive */
+        @media (max-width: 1024px) {
+            .sidebar {
+                transform: translateX(-100%);
+            }
+
+            .main-content {
+                margin-left: 0;
+            }
+
+            .clients-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <!-- Sidebar -->
+    <div class="sidebar">
+        <div class="sidebar-header">
+            <div class="logo-container">
+                <svg class="logo-svg" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+                    <defs>
+                        <linearGradient id="logoGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                            <stop offset="0%" style="stop-color:#667eea" />
+                            <stop offset="100%" style="stop-color:#764ba2" />
+                        </linearGradient>
+                    </defs>
+                    <path d="M50 15 L61 40 L88 40 L66 56 L75 82 L50 65 L25 82 L34 56 L12 40 L39 40 Z"
+                        fill="url(#logoGrad)" stroke="white" stroke-width="2" />
+                    <text x="50" y="55" font-family="Arial" font-size="16" font-weight="bold" fill="white"
+                        text-anchor="middle">AI</text>
+                </svg>
+                <span class="logo-text">SUPER AI</span>
+            </div>
+            <div class="user-info">
+                <div class="user-name">Admin User</div>
+                <div class="user-role">Platform Administrator</div>
+            </div>
+        </div>
+
+        <div class="nav-section">
+            <div class="nav-label">Main</div>
+            <a href="dashboard.html" class="nav-item">
+                <span class="nav-icon">📊</span>
+                <span>Dashboard</span>
+            </a>
+            <a href="my-clients.html" class="nav-item active">
+                <span class="nav-icon">👥</span>
+                <span>My Clients</span>
+            </a>
+        </div>
+
+        <div class="nav-section">
+            <div class="nav-label">Analytics</div>
+            <a href="review-history.html" class="nav-item">
+                <span class="nav-icon">📜</span>
+                <span>Review History</span>
+            </a>
+            <a href="staff-performance.html" class="nav-item">
+                <span class="nav-icon">🏆</span>
+                <span>Staff Performance</span>
+            </a>
+        </div>
+
+        <div class="nav-section">
+            <div class="nav-label">Growth</div>
+            <a href="multi-location.html" class="nav-item">
+                <span class="nav-icon">📍</span>
+                <span>Locations</span>
+            </a>
+            <a href="referrals.html" class="nav-item">
+                <span class="nav-icon">🎁</span>
+                <span>Referrals</span>
+            </a>
+        </div>
+
+        <div class="nav-section">
+            <div class="nav-label">Settings</div>
+            <a href="payments.html" class="nav-item">
+                <span class="nav-icon">💳</span>
+                <span>Payments</span>
+            </a>
+            <a href="faq.html" class="nav-item">
+                <span class="nav-icon">❓</span>
+                <span>Help & FAQ</span>
+            </a>
+            <a href="home.html" class="nav-item">
+                <span class="nav-icon">🚪</span>
+                <span>Logout</span>
+            </a>
+        </div>
+    </div>
+
+    <!-- Main Content -->
+    <div class="main-content">
+        <!-- Top Bar -->
+        <div class="top-bar">
+            <div>
+                <h1 class="page-title">My Clients</h1>
+                <p class="page-subtitle">Manage all your business clients and their review pages</p>
+            </div>
+            <div class="top-actions">
+                <button class="btn btn-secondary">📥 Export All</button>
+                <button class="btn btn-primary" onclick="location.href='signup-wizard.html'">
+                    ➕ Add New Client
+                </button>
+            </div>
+        </div>
+
+        <!-- Filters -->
+        <div class="filters">
+            <div class="search-box">
+                <span class="search-icon">🔍</span>
+                <input type="text" placeholder="Search clients by name, location..." id="searchInput">
+            </div>
+            <select id="statusFilter">
+                <option value="all">All Status</option>
+                <option value="active">Active</option>
+                <option value="expiring">Expiring Soon</option>
+            </select>
+            <select id="planFilter">
+                <option value="all">All Plans</option>
+                <option value="monthly">Monthly</option>
+                <option value="annual">Annual</option>
+                <option value="3-year">3-Year</option>
+            </select>
+        </div>
+
+        <!-- Clients Grid -->
+        <div class="clients-grid" id="clientsGrid">
+            <!-- Raj's Salon -->
+            <div class="client-card" data-status="active" data-plan="annual">
+                <div class="client-header">
+                    <div class="client-logo-big">💇</div>
+                    <div class="client-title">
+                        <h3>Raj's Salon</h3>
+                        <p>📍 123 MG Road, Bangalore</p>
+                    </div>
+                </div>
+
+                <span class="badge badge-active">✓ Active</span>
+
+                <div class="client-stats">
+                    <div class="stat-mini">
+                        <div class="stat-mini-number">87</div>
+                        <div class="stat-mini-label">Reviews</div>
+                    </div>
+                    <div class="stat-mini">
+                        <div class="stat-mini-number">4.8</div>
+                        <div class="stat-mini-label">Rating</div>
+                    </div>
+                    <div class="stat-mini">
+                        <div class="stat-mini-number">5</div>
+                        <div class="stat-mini-label">Services</div>
+                    </div>
+                </div>
+
+                <div class="client-info">
+                    <div class="info-row">
+                        <span class="info-label">Plan</span>
+                        <span class="info-value">Annual</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">Valid Until</span>
+                        <span class="info-value">15-Jan-2027</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">Contact</span>
+                        <span class="info-value">+91-9876543210</span>
+                    </div>
+                </div>
+
+                <div class="qr-section">
+                    <div class="qr-label">Customer Review QR Code</div>
+                    <div class="qr-code">
+                        <img src="https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=https://superaireview.com/review?business=raj-salon"
+                            alt="QR Code">
+                    </div>
+                    <a href="https://api.qrserver.com/v1/create-qr-code/?size=500x500&data=https://superaireview.com/review?business=raj-salon"
+                        download class="qr-download">
+                        📥 Download High-Res QR Code
+                    </a>
+                </div>
+
+                <div class="client-actions">
+                    <button class="btn btn-primary btn-sm"
+                        onclick="location.href='client-page-dynamic.html?business=raj-salon'">
+                        📱 View Page
+                    </button>
+                    <button class="btn btn-secondary btn-sm">✏️ Edit</button>
+                </div>
+            </div>
+
+            <!-- Spa Paradise -->
+            <div class="client-card" data-status="active" data-plan="3-year">
+                <div class="client-header">
+                    <div class="client-logo-big">🧖</div>
+                    <div class="client-title">
+                        <h3>Spa Paradise</h3>
+                        <p>📍 45 Koramangala, Bangalore</p>
+                    </div>
+                </div>
+
+                <span class="badge badge-active">✓ Active</span>
+
+                <div class="client-stats">
+                    <div class="stat-mini">
+                        <div class="stat-mini-number">124</div>
+                        <div class="stat-mini-label">Reviews</div>
+                    </div>
+                    <div class="stat-mini">
+                        <div class="stat-mini-number">4.9</div>
+                        <div class="stat-mini-label">Rating</div>
+                    </div>
+                    <div class="stat-mini">
+                        <div class="stat-mini-number">5</div>
+                        <div class="stat-mini-label">Services</div>
+                    </div>
+                </div>
+
+                <div class="client-info">
+                    <div class="info-row">
+                        <span class="info-label">Plan</span>
+                        <span class="info-value">3-Year</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">Valid Until</span>
+                        <span class="info-value">20-Dec-2028</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">Contact</span>
+                        <span class="info-value">+91-9876543211</span>
+                    </div>
+                </div>
+
+                <div class="qr-section">
+                    <div class="qr-label">Customer Review QR Code</div>
+                    <div class="qr-code">
+                        <img src="https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=https://superaireview.com/review?business=spa-paradise"
+                            alt="QR Code">
+                    </div>
+                    <a href="https://api.qrserver.com/v1/create-qr-code/?size=500x500&data=https://superaireview.com/review?business=spa-paradise"
+                        download class="qr-download">
+                        📥 Download High-Res QR Code
+                    </a>
+                </div>
+
+                <div class="client-actions">
+                    <button class="btn btn-primary btn-sm"
+                        onclick="location.href='client-page-dynamic.html?business=spa-paradise'">
+                        📱 View Page
+                    </button>
+                    <button class="btn btn-secondary btn-sm">✏️ Edit</button>
+                </div>
+            </div>
+
+            <!-- Pizza Corner -->
+            <div class="client-card" data-status="expiring" data-plan="monthly">
+                <div class="client-header">
+                    <div class="client-logo-big">🍕</div>
+                    <div class="client-title">
+                        <h3>Pizza Corner</h3>
+                        <p>📍 78 Indiranagar, Bangalore</p>
+                    </div>
+                </div>
+
+                <span class="badge badge-expiring">⏰ Expiring Soon</span>
+
+                <div class="client-stats">
+                    <div class="stat-mini">
+                        <div class="stat-mini-number">45</div>
+                        <div class="stat-mini-label">Reviews</div>
+                    </div>
+                    <div class="stat-mini">
+                        <div class="stat-mini-number">4.5</div>
+                        <div class="stat-mini-label">Rating</div>
+                    </div>
+                    <div class="stat-mini">
+                        <div class="stat-mini-number">5</div>
+                        <div class="stat-mini-label">Services</div>
+                    </div>
+                </div>
+
+                <div class="client-info">
+                    <div class="info-row">
+                        <span class="info-label">Plan</span>
+                        <span class="info-value">Monthly</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">Valid Until</span>
+                        <span class="info-value">15-Feb-2026</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">Contact</span>
+                        <span class="info-value">+91-9876543212</span>
+                    </div>
+                </div>
+
+                <div class="qr-section">
+                    <div class="qr-label">Customer Review QR Code</div>
+                    <div class="qr-code">
+                        <img src="https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=https://superaireview.com/review?business=pizza-corner"
+                            alt="QR Code">
+                    </div>
+                    <a href="https://api.qrserver.com/v1/create-qr-code/?size=500x500&data=https://superaireview.com/review?business=pizza-corner"
+                        download class="qr-download">
+                        📥 Download High-Res QR Code
+                    </a>
+                </div>
+
+                <div class="client-actions">
+                    <button class="btn btn-primary btn-sm"
+                        onclick="location.href='client-page-dynamic.html?business=pizza-corner'">
+                        📱 View Page
+                    </button>
+                    <button class="btn btn-secondary btn-sm">🔄 Renew</button>
+                </div>
+            </div>
+
+            <!-- Fitness Hub -->
+            <div class="client-card" data-status="active" data-plan="annual">
+                <div class="client-header">
+                    <div class="client-logo-big">💪</div>
+                    <div class="client-title">
+                        <h3>Fitness Hub</h3>
+                        <p>📍 90 HSR Layout, Bangalore</p>
+                    </div>
+                </div>
+
+                <span class="badge badge-active">✓ Active</span>
+
+                <div class="client-stats">
+                    <div class="stat-mini">
+                        <div class="stat-mini-number">63</div>
+                        <div class="stat-mini-label">Reviews</div>
+                    </div>
+                    <div class="stat-mini">
+                        <div class="stat-mini-number">4.7</div>
+                        <div class="stat-mini-label">Rating</div>
+                    </div>
+                    <div class="stat-mini">
+                        <div class="stat-mini-number">5</div>
+                        <div class="stat-mini-label">Services</div>
+                    </div>
+                </div>
+
+                <div class="client-info">
+                    <div class="info-row">
+                        <span class="info-label">Plan</span>
+                        <span class="info-value">Annual</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">Valid Until</span>
+                        <span class="info-value">10-Aug-2026</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">Contact</span>
+                        <span class="info-value">+91-9876543213</span>
+                    </div>
+                </div>
+
+                <div class="qr-section">
+                    <div class="qr-label">Customer Review QR Code</div>
+                    <div class="qr-code">
+                        <img src="https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=https://superaireview.com/review?business=fitness-hub"
+                            alt="QR Code">
+                    </div>
+                    <a href="https://api.qrserver.com/v1/create-qr-code/?size=500x500&data=https://superaireview.com/review?business=fitness-hub"
+                        download class="qr-download">
+                        📥 Download High-Res QR Code
+                    </a>
+                </div>
+
+                <div class="client-actions">
+                    <button class="btn btn-primary btn-sm"
+                        onclick="location.href='client-page-dynamic.html?business=fitness-hub'">
+                        📱 View Page
+                    </button>
+                    <button class="btn btn-secondary btn-sm">✏️ Edit</button>
+                </div>
+            </div>
+
+            <!-- Beauty Lounge -->
+            <div class="client-card" data-status="active" data-plan="annual">
+                <div class="client-header">
+                    <div class="client-logo-big">💄</div>
+                    <div class="client-title">
+                        <h3>Beauty Lounge</h3>
+                        <p>📍 12 Whitefield, Bangalore</p>
+                    </div>
+                </div>
+
+                <span class="badge badge-active">✓ Active</span>
+
+                <div class="client-stats">
+                    <div class="stat-mini">
+                        <div class="stat-mini-number">168</div>
+                        <div class="stat-mini-label">Reviews</div>
+                    </div>
+                    <div class="stat-mini">
+                        <div class="stat-mini-number">4.9</div>
+                        <div class="stat-mini-label">Rating</div>
+                    </div>
+                    <div class="stat-mini">
+                        <div class="stat-mini-number">5</div>
+                        <div class="stat-mini-label">Services</div>
+                    </div>
+                </div>
+
+                <div class="client-info">
+                    <div class="info-row">
+                        <span class="info-label">Plan</span>
+                        <span class="info-value">Annual</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">Valid Until</span>
+                        <span class="info-value">22-Nov-2026</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">Contact</span>
+                        <span class="info-value">+91-9876543214</span>
+                    </div>
+                </div>
+
+                <div class="qr-section">
+                    <div class="qr-label">Customer Review QR Code</div>
+                    <div class="qr-code">
+                        <img src="https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=https://superaireview.com/review?business=beauty-lounge"
+                            alt="QR Code">
+                    </div>
+                    <a href="https://api.qrserver.com/v1/create-qr-code/?size=500x500&data=https://superaireview.com/review?business=beauty-lounge"
+                        download class="qr-download">
+                        📥 Download High-Res QR Code
+                    </a>
+                </div>
+
+                <div class="client-actions">
+                    <button class="btn btn-primary btn-sm"
+                        onclick="location.href='client-page-dynamic.html?business=beauty-lounge'">
+                        📱 View Page
+                    </button>
+                    <button class="btn btn-secondary btn-sm">✏️ Edit</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Search functionality
+        document.getElementById('searchInput').addEventListener('input', function (e) {
+            const searchTerm = e.target.value.toLowerCase();
+            const cards = document.querySelectorAll('.client-card');
+
+            cards.forEach(card => {
+                const text = card.textContent.toLowerCase();
+                card.style.display = text.includes(searchTerm) ? '' : 'none';
+            });
+        });
+
+        // Status filter
+        document.getElementById('statusFilter').addEventListener('change', function (e) {
+            const status = e.target.value;
+            const cards = document.querySelectorAll('.client-card');
+
+            cards.forEach(card => {
+                if (status === 'all' || card.dataset.status === status) {
+                    card.style.display = '';
+                } else {
+                    card.style.display = 'none';
+                }
+            });
+        });
+
+        // Plan filter
+        document.getElementById('planFilter').addEventListener('change', function (e) {
+            const plan = e.target.value;
+            const cards = document.querySelectorAll('.client-card');
+
+            cards.forEach(card => {
+                if (plan === 'all' || card.dataset.plan === plan) {
+                    card.style.display = '';
+                } else {
+                    card.style.display = 'none';
+                }
+            });
+        });
+    </script>
+</body>
+
+</html>
