@@ -7,7 +7,6 @@ import Logo from '../components/common/Logo';
 import AboutUs from './AboutUs';
 import Referrals from './Referrals';
 import AddClientModal from '../components/admin/AddClientModal';
-import EditClientModal from '../components/admin/EditClientModal';
 import QRCodeModal from '../components/admin/QRCodeModal';
 import {
     ChartBarIcon,
@@ -36,7 +35,6 @@ export default function AdminDashboard() {
     const [searchTerm, setSearchTerm] = useState('');
     const [filterStatus, setFilterStatus] = useState('all');
     const [showAddClientModal, setShowAddClientModal] = useState(false);
-    const [showEditClientModal, setShowEditClientModal] = useState(false);
     const [showQRModal, setShowQRModal] = useState(false);
     const [editingClient, setEditingClient] = useState(null);
     const [qrClient, setQRClient] = useState(null);
@@ -137,13 +135,13 @@ export default function AdminDashboard() {
 
     useEffect(() => {
         if (!sessionStorage.getItem('adminLoggedIn')) {
-            navigate('/admin/login');
+            navigate('/login', { state: { defaultMode: 'admin' } });
         }
     }, [navigate]);
 
     const handleLogout = () => {
         sessionStorage.removeItem('adminLoggedIn');
-        navigate('/admin/login');
+        navigate('/login', { state: { defaultMode: 'admin' } });
     };
 
     const stats = [
@@ -195,6 +193,7 @@ export default function AdminDashboard() {
     const navigationItems = [
         { id: 'dashboard', name: 'Dashboard', icon: ChartBarIcon },
         { id: 'clients', name: 'Clients', icon: UsersIcon },
+        { id: 'management', name: 'Client Management', icon: ClipboardDocumentCheckIcon },
         { id: 'reviews', name: 'Reviews', icon: StarIcon },
         { id: 'analytics', name: 'Analytics', icon: ChartPieIcon },
         { id: 'referrals', name: 'Referrals', icon: UserGroupIcon },
@@ -322,7 +321,10 @@ export default function AdminDashboard() {
                     <motion.button
                         whileHover={{ scale: 1.02 }}
                         whileTap={{ scale: 0.98 }}
-                        onClick={() => setShowAddClientModal(true)}
+                        onClick={() => {
+                            setEditingClient(null);
+                            setShowAddClientModal(true);
+                        }}
                         className="btn btn-primary flex items-center gap-2 whitespace-nowrap px-6"
                     >
                         <PlusIcon className="w-5 h-5" />
@@ -356,10 +358,12 @@ export default function AdminDashboard() {
                                 >
                                     <td className="px-6 py-4">
                                         <div className="flex items-center gap-3">
-                                            <div className="text-3xl">{business.logo}</div>
+                                            <div className="text-3xl">{business.logo || '🏢'}</div>
                                             <div>
-                                                <div className="font-semibold">{business.business_name || business.name || 'Unnamed'}</div>
-                                                <div className="text-sm text-gray-500">{business.tagline}</div>
+                                                <div className="font-bold text-slate-800">
+                                                    {business.business_name || business.name || (business.business_id ? `ID: ${business.business_id}` : 'Unnamed Business')}
+                                                </div>
+                                                <div className="text-sm text-gray-500">{business.tagline || 'No tagline'}</div>
                                             </div>
                                         </div>
                                     </td>
@@ -392,7 +396,7 @@ export default function AdminDashboard() {
                                             <button
                                                 onClick={() => {
                                                     setEditingClient(business);
-                                                    setShowEditClientModal(true);
+                                                    setShowAddClientModal(true);
                                                 }}
                                                 className="inline-flex items-center gap-1 text-blue-600 hover:text-blue-800 font-semibold transition-colors"
                                             >
@@ -468,13 +472,13 @@ export default function AdminDashboard() {
                         </div>
                         <div className="flex items-center gap-2">
                             <StarIcon className="w-6 h-6 fill-yellow-400 text-yellow-400" />
-                            <span className="text-2xl font-bold">{business.rating}</span>
+                            <span className="text-2xl font-bold">{business.average_rating || '0.0'}</span>
                         </div>
                     </div>
                     <div className="grid grid-cols-3 gap-4">
                         <div className="bg-gray-50 p-4 rounded-xl">
                             <div className="text-sm text-gray-600 mb-1">Total Reviews</div>
-                            <div className="text-2xl font-bold">{business.reviewCount}</div>
+                            <div className="text-2xl font-bold">{business.total_reviews || 0}</div>
                         </div>
                         <div className="bg-gray-50 p-4 rounded-xl">
                             <div className="text-sm text-gray-600 mb-1">Generated</div>
@@ -633,6 +637,171 @@ export default function AdminDashboard() {
         </div>
     );
 
+    const renderManagement = () => {
+        // Mock client credentials data (in production, fetch from database)
+        const clientCredentials = [
+            {
+                id: 'pizza-corner',
+                businessName: 'Pizza Corner',
+                username: 'pizzacorner',
+                password: 'demo123',
+                status: 'Active',
+                plan: 'Premium',
+                onboardDate: '2026-01-15',
+                lastLogin: '2026-02-11',
+                paymentStatus: 'Paid'
+            },
+            {
+                id: 'rajs-salon',
+                businessName: "Raj's Salon",
+                username: 'rajssalon',
+                password: 'salon456',
+                status: 'Active',
+                plan: 'Premium',
+                onboardDate: '2026-01-10',
+                lastLogin: '2026-02-10',
+                paymentStatus: 'Paid'
+            }
+        ];
+
+        const handleLoginAsClient = (clientId) => {
+            sessionStorage.setItem('clientLoggedIn', 'true');
+            sessionStorage.setItem('clientId', clientId);
+            window.open('/client/dashboard', '_blank');
+        };
+
+        const handlePauseAccount = (clientId) => {
+            alert(`Account ${clientId} has been paused. Client cannot login until reactivated.`);
+        };
+
+        const handleTerminateAccount = (clientId) => {
+            if (confirm(`Are you sure you want to permanently terminate ${clientId}? This action cannot be undone.`)) {
+                alert(`Account ${clientId} has been terminated.`);
+            }
+        };
+
+        return (
+            <div className="space-y-6">
+                <div className="card">
+                    <div className="flex items-center justify-between mb-6">
+                        <div>
+                            <h2 className="text-2xl font-bold mb-2">Client Account Management</h2>
+                            <p className="text-gray-600">Manage client credentials, account status, and access control</p>
+                        </div>
+                    </div>
+
+                    {/* Credentials Table */}
+                    <div className="overflow-x-auto">
+                        <table className="w-full">
+                            <thead>
+                                <tr className="bg-gray-50 border-b border-gray-200">
+                                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Business</th>
+                                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Username</th>
+                                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Password</th>
+                                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Status</th>
+                                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Payment</th>
+                                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Onboarded</th>
+                                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody className="divide-y divide-gray-200">
+                                {clientCredentials.map((client) => (
+                                    <tr key={client.id} className="hover:bg-gray-50 transition-colors">
+                                        <td className="px-4 py-4">
+                                            <div>
+                                                <p className="font-semibold text-gray-900">{client.businessName}</p>
+                                                <p className="text-xs text-gray-500">{client.plan} Plan</p>
+                                            </div>
+                                        </td>
+                                        <td className="px-4 py-4">
+                                            <code className="px-2 py-1 bg-gray-100 rounded text-sm font-mono text-gray-900">
+                                                {client.username}
+                                            </code>
+                                        </td>
+                                        <td className="px-4 py-4">
+                                            <code className="px-2 py-1 bg-gray-100 rounded text-sm font-mono text-gray-900">
+                                                {client.password}
+                                            </code>
+                                        </td>
+                                        <td className="px-4 py-4">
+                                            <span className={`px-3 py-1 rounded-full text-xs font-bold ${client.status === 'Active'
+                                                ? 'bg-green-100 text-green-700'
+                                                : 'bg-red-100 text-red-700'
+                                                }`}>
+                                                {client.status}
+                                            </span>
+                                        </td>
+                                        <td className="px-4 py-4">
+                                            <span className={`px-3 py-1 rounded-full text-xs font-bold ${client.paymentStatus === 'Paid'
+                                                ? 'bg-blue-100 text-blue-700'
+                                                : 'bg-orange-100 text-orange-700'
+                                                }`}>
+                                                {client.paymentStatus}
+                                            </span>
+                                        </td>
+                                        <td className="px-4 py-4 text-sm text-gray-600">
+                                            {new Date(client.onboardDate).toLocaleDateString()}
+                                        </td>
+                                        <td className="px-4 py-4">
+                                            <div className="flex items-center gap-2">
+                                                <button
+                                                    onClick={() => handleLoginAsClient(client.id)}
+                                                    className="p-2 bg-blue-100 text-blue-600 rounded-lg hover:bg-blue-200 transition-colors"
+                                                    title="Login as Client"
+                                                >
+                                                    <ArrowRightOnRectangleIcon className="w-4 h-4" />
+                                                </button>
+                                                <button
+                                                    onClick={() => handlePauseAccount(client.id)}
+                                                    className="p-2 bg-yellow-100 text-yellow-600 rounded-lg hover:bg-yellow-200 transition-colors"
+                                                    title="Pause Account"
+                                                >
+                                                    ⏸️
+                                                </button>
+                                                <button
+                                                    onClick={() => handleTerminateAccount(client.id)}
+                                                    className="p-2 bg-red-100 text-red-600 rounded-lg hover:bg-red-200 transition-colors"
+                                                    title="Terminate Account"
+                                                >
+                                                    <TrashIcon className="w-4 h-4" />
+                                                </button>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
+
+                    {/* Legend */}
+                    <div className="mt-6 p-4 bg-gray-50 rounded-xl">
+                        <h4 className="font-semibold text-gray-900 mb-3">Action Legend:</h4>
+                        <div className="grid grid-cols-3 gap-4 text-sm">
+                            <div className="flex items-center gap-2">
+                                <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center">
+                                    <ArrowRightOnRectangleIcon className="w-4 h-4 text-blue-600" />
+                                </div>
+                                <span className="text-gray-700"><strong>Login as Client:</strong> Impersonate client account</span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                                <div className="w-8 h-8 bg-yellow-100 rounded-lg flex items-center justify-center text-yellow-600">
+                                    ⏸️
+                                </div>
+                                <span className="text-gray-700"><strong>Pause:</strong> Disable login (payment overdue)</span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                                <div className="w-8 h-8 bg-red-100 rounded-lg flex items-center justify-center">
+                                    <TrashIcon className="w-4 h-4 text-red-600" />
+                                </div>
+                                <span className="text-gray-700"><strong>Terminate:</strong> Permanently delete account</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        );
+    };
+
     const renderWhatsApp = () => (
         <div className="space-y-6">
             <div className="card">
@@ -726,20 +895,61 @@ export default function AdminDashboard() {
         </div>
     );
 
+    const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+
     return (
-        <div className="min-h-screen relative overflow-hidden bg-gradient-to-br from-blue-100 via-purple-100 to-pink-100">
+        <div className="min-h-screen relative overflow-hidden bg-gradient-to-br from-blue-100 via-purple-100 to-pink-100 font-sans">
             {/* Animated Background Blobs */}
-            <div className="absolute inset-0 overflow-hidden">
+            <div className="absolute inset-0 overflow-hidden pointer-events-none">
                 <div className="absolute top-20 left-10 w-96 h-96 bg-blue-400 rounded-full mix-blend-multiply filter blur-3xl opacity-30 animate-blob"></div>
                 <div className="absolute top-40 right-10 w-96 h-96 bg-purple-400 rounded-full mix-blend-multiply filter blur-3xl opacity-30 animate-blob animation-delay-2000"></div>
                 <div className="absolute bottom-20 left-1/2 w-96 h-96 bg-pink-400 rounded-full mix-blend-multiply filter blur-3xl opacity-30 animate-blob animation-delay-4000"></div>
             </div>
 
+            {/* Mobile Header */}
+            <div className="md:hidden fixed top-0 left-0 right-0 z-40 bg-white/80 backdrop-blur-md border-b border-white/20 px-4 py-3 flex items-center justify-between shadow-sm">
+                <div className="flex items-center gap-3">
+                    <Logo size="small" variant="icon" />
+                    <span className="font-bold text-gray-800">Admin</span>
+                </div>
+                <button
+                    onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+                    className="p-2 rounded-lg bg-white shadow-sm border border-gray-100 text-gray-600 hover:bg-gray-50"
+                >
+                    {isMobileMenuOpen ? (
+                        <XMarkIcon className="w-6 h-6" />
+                    ) : (
+                        <div className="space-y-1.5 w-6">
+                            <span className="block w-full h-0.5 bg-gray-600"></span>
+                            <span className="block w-full h-0.5 bg-gray-600"></span>
+                            <span className="block w-full h-0.5 bg-gray-600"></span>
+                        </div>
+                    )}
+                </button>
+            </div>
+
+            {/* Mobile Sidebar Overlay */}
+            {isMobileMenuOpen && (
+                <div
+                    className="fixed inset-0 bg-black/50 z-40 md:hidden backdrop-blur-sm"
+                    onClick={() => setIsMobileMenuOpen(false)}
+                />
+            )}
+
             {/* Sidebar */}
-            <div className="fixed left-0 top-0 h-full w-72 bg-gradient-to-br from-slate-800 via-blue-900 to-indigo-900 shadow-2xl p-6 overflow-y-auto scrollbar-custom border-r border-white/10 z-50">
+            <div className={`fixed left-0 top-0 h-full w-72 bg-gradient-to-br from-slate-800 via-blue-900 to-indigo-900 shadow-2xl p-6 overflow-y-auto scrollbar-custom border-r border-white/10 z-50 transition-transform duration-300 ease-in-out md:translate-x-0 ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full'}`}>
                 {/* Logo */}
-                <div className="mb-12 pb-6 border-b border-white/20">
-                    <Logo size="small" variant="full" className="mb-3" isDark={true} />
+                <div className="mb-12 pb-6 border-b border-white/20 flex flex-col">
+                    <div className="flex justify-between items-start">
+                        <Logo size="small" variant="full" className="mb-3" isDark={true} />
+                        {/* Close button for mobile within sidebar */}
+                        <button
+                            onClick={() => setIsMobileMenuOpen(false)}
+                            className="md:hidden p-1 text-white/50 hover:text-white"
+                        >
+                            <XMarkIcon className="w-6 h-6" />
+                        </button>
+                    </div>
                     <div className="text-xs text-white/80 font-bold tracking-wider ml-1">ADMIN DASHBOARD</div>
                 </div>
 
@@ -750,7 +960,10 @@ export default function AdminDashboard() {
                         return (
                             <button
                                 key={item.id}
-                                onClick={() => setActiveTab(item.id)}
+                                onClick={() => {
+                                    setActiveTab(item.id);
+                                    setIsMobileMenuOpen(false);
+                                }}
                                 className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all font-medium ${activeTab === item.id
                                     ? 'bg-white text-blue-600 shadow-lg'
                                     : 'hover:bg-white/10 text-white/90 hover:text-white'
@@ -774,15 +987,16 @@ export default function AdminDashboard() {
             </div>
 
             {/* Main Content */}
-            <div className="ml-72 p-8 relative z-10">
+            <div className="pt-20 md:pt-8 md:ml-72 p-4 md:p-8 relative z-10 transition-all duration-300">
                 {/* Header */}
-                <div className="mb-8">
+                <div className="mb-8 hidden md:block">
                     <h1 className="text-4xl font-bold mb-2">
                         {navigationItems.find(item => item.id === activeTab)?.name}
                     </h1>
                     <p className="text-gray-600">
                         {activeTab === 'dashboard' && 'Welcome back, Admin!'}
                         {activeTab === 'clients' && 'Manage your business clients'}
+                        {activeTab === 'management' && 'Control client credentials and account status'}
                         {activeTab === 'reviews' && 'Monitor all reviews across businesses'}
                         {activeTab === 'analytics' && 'Detailed analytics and insights'}
                         {activeTab === 'referrals' && 'Manage referral program and earnings'}
@@ -790,31 +1004,31 @@ export default function AdminDashboard() {
                         {activeTab === 'about' && 'About Kaiten Software and AI Review Platform'}
                     </p>
                 </div>
+                {/* Mobile Page Title */}
+                <div className="mb-6 md:hidden">
+                    <h1 className="text-2xl font-bold text-gray-900">
+                        {navigationItems.find(item => item.id === activeTab)?.name}
+                    </h1>
+                </div>
 
                 {/* Tab Content */}
                 {activeTab === 'dashboard' && renderDashboard()}
                 {activeTab === 'clients' && renderClients()}
+                {activeTab === 'management' && renderManagement()}
                 {activeTab === 'reviews' && renderReviews()}
                 {activeTab === 'analytics' && renderAnalytics()}
                 {activeTab === 'referrals' && <Referrals />}
                 {activeTab === 'whatsapp' && renderWhatsApp()}
                 {activeTab === 'about' && <AboutUs />}
             </div>
-            {/* Add Client Modal */}
+            {/* Add/Edit Client Modal */}
             <AddClientModal
                 isOpen={showAddClientModal}
-                onClose={() => setShowAddClientModal(false)}
-            />
-
-            {/* Edit Client Modal */}
-            <EditClientModal
-                isOpen={showEditClientModal}
                 onClose={() => {
-                    setShowEditClientModal(false);
+                    setShowAddClientModal(false);
                     setEditingClient(null);
                 }}
                 client={editingClient}
-                onUpdate={loadClients}
             />
 
             {/* QR Code Modal */}

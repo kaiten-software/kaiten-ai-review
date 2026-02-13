@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { getBusinessById } from '../data/businesses';
 import { getClientById } from '../lib/supabase';
@@ -11,6 +11,8 @@ import { StarIcon, MapPinIcon, PhoneIcon, EnvelopeIcon } from '@heroicons/react/
 export default function BusinessPage() {
     const { businessId } = useParams();
     const navigate = useNavigate();
+    const location = useLocation();
+    const fromDashboard = location.state?.from === 'client-dashboard';
     const [business, setBusiness] = useState(null);
     const [loading, setLoading] = useState(true);
 
@@ -110,7 +112,22 @@ export default function BusinessPage() {
     const displayBusiness = safeBusinessData;
 
     return (
-        <div className="min-h-screen bg-gray-50">
+        <div className="min-h-screen bg-gray-50 relative">
+            {fromDashboard && (
+                <motion.div
+                    initial={{ opacity: 0, y: -20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="fixed top-24 left-6 z-50"
+                >
+                    <button
+                        onClick={() => navigate('/client/dashboard')}
+                        className="bg-white/90 backdrop-blur-md hover:bg-white text-gray-900 px-6 py-3 rounded-full shadow-lg border border-gray-200 font-bold flex items-center gap-2 transition-all transform hover:scale-105 group"
+                    >
+                        <span className="group-hover:-translate-x-1 transition-transform">←</span>
+                        Back to Dashboard
+                    </button>
+                </motion.div>
+            )}
             <Navbar />
 
             {/* Hero Section */}
@@ -204,30 +221,68 @@ export default function BusinessPage() {
                     </motion.div>
 
                     <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
-                        {displayBusiness.services.map((service, index) => (
-                            <motion.div
-                                key={index}
-                                initial={{ opacity: 0, y: 20 }}
-                                whileInView={{ opacity: 1, y: 0 }}
-                                viewport={{ once: true }}
-                                transition={{ delay: index * 0.1 }}
-                                className="card group overflow-hidden"
-                            >
-                                <div className="relative h-48 -m-6 mb-6 overflow-hidden rounded-t-2xl">
-                                    <img
-                                        src={service.image}
-                                        alt={service.name}
-                                        className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
-                                    />
-                                </div>
-                                <h3 className="text-xl font-bold mb-2">{service.name}</h3>
-                                <p className="text-gray-600 mb-4">{service.description}</p>
-                                <div className="flex justify-between items-center">
-                                    <span className="text-2xl font-bold gradient-text">{service.price}</span>
-                                    <span className="text-gray-500">{service.duration}</span>
-                                </div>
-                            </motion.div>
-                        ))}
+                        {displayBusiness.services.map((service, index) => {
+                            const isObject = typeof service === 'object' && service !== null;
+
+                            if (!isObject) {
+                                // Simple Card for String Services (e.g. Pizza Corner menu)
+                                return (
+                                    <motion.div
+                                        key={index}
+                                        initial={{ opacity: 0, y: 20 }}
+                                        whileInView={{ opacity: 1, y: 0 }}
+                                        viewport={{ once: true }}
+                                        transition={{ delay: index * 0.05 }}
+                                        className="bg-white p-6 rounded-2xl shadow-sm hover:shadow-md transition-shadow border border-slate-100 flex items-center justify-between group"
+                                    >
+                                        <div className="flex items-center gap-4">
+                                            <div className="w-12 h-12 rounded-full bg-orange-100 text-orange-600 flex items-center justify-center text-xl font-bold group-hover:scale-110 transition-transform">
+                                                🍽️
+                                            </div>
+                                            <h3 className="text-lg font-bold text-slate-800">{service}</h3>
+                                        </div>
+                                        <span className="text-slate-400 text-sm font-medium">Available</span>
+                                    </motion.div>
+                                );
+                            }
+
+                            // Full Card for detailed services (e.g. Raj's Salon)
+                            return (
+                                <motion.div
+                                    key={index}
+                                    initial={{ opacity: 0, y: 20 }}
+                                    whileInView={{ opacity: 1, y: 0 }}
+                                    viewport={{ once: true }}
+                                    transition={{ delay: index * 0.1 }}
+                                    className="bg-white rounded-2xl shadow-lg overflow-hidden hover:shadow-xl transition-shadow group"
+                                >
+                                    <div className="relative h-48 overflow-hidden">
+                                        <img
+                                            src={service.image}
+                                            alt={service.name}
+                                            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                                            onError={(e) => {
+                                                e.target.style.display = 'none';
+                                                e.target.nextSibling.style.display = 'flex';
+                                            }}
+                                        />
+                                        <div className="hidden absolute inset-0 bg-slate-100 items-center justify-center text-4xl text-slate-300">
+                                            ✨
+                                        </div>
+                                    </div>
+                                    <div className="p-6">
+                                        <h3 className="text-xl font-bold mb-2">{service.name}</h3>
+                                        {service.description && <p className="text-gray-600 mb-4 text-sm">{service.description}</p>}
+                                        <div className="flex justify-between items-center mt-4 pt-4 border-t border-gray-100">
+                                            <span className="text-xl font-bold text-indigo-600">{service.price}</span>
+                                            <span className="text-gray-500 text-sm flex items-center gap-1">
+                                                ⏱️ {service.duration}
+                                            </span>
+                                        </div>
+                                    </div>
+                                </motion.div>
+                            );
+                        })}
                     </div>
                 </div>
             </section>

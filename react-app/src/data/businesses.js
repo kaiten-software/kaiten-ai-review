@@ -15,6 +15,8 @@ export const businesses = {
       { platform: 'instagram', url: 'https://instagram.com/rajssalon' },
       { platform: 'facebook', url: 'https://facebook.com/rajssalon' }
     ],
+    google_business_url: 'https://search.google.com/local/writereview?placeid=ChIJUewm6BHXCDkRdClN6_t0Be4',
+    googlePlaceId: 'ChIJUewm6BHXCDkRdClN6_t0Be4', // Sample Place ID for smoother mobile experience
 
     // Hero images - High quality salon photos
     hero: {
@@ -147,6 +149,8 @@ export const businesses = {
       { platform: 'instagram', url: 'https://instagram.com/spaparadise' },
       { platform: 'tiktok', url: 'https://tiktok.com/@spaparadise' }
     ],
+    google_business_url: 'https://search.google.com/local/writereview?placeid=ChIJUewm6BHXCDkRdClN6_t0Be4',
+    googlePlaceId: 'ChIJUewm6BHXCDkRdClN6_t0Be4',
 
     hero: {
       main: 'https://images.unsplash.com/photo-1544161515-4ab6ce6db874?w=1920&h=1080&fit=crop',
@@ -274,6 +278,8 @@ export const businesses = {
       { platform: 'instagram', url: 'https://instagram.com/pizzacorner' },
       { platform: 'facebook', url: 'https://facebook.com/pizzacorner' }
     ],
+    google_business_url: 'https://search.google.com/local/writereview?placeid=ChIJUewm6BHXCDkRdClN6_t0Be4',
+    googlePlaceId: 'ChIJUewm6BHXCDkRdClN6_t0Be4',
 
     hero: {
       main: 'https://images.unsplash.com/photo-1513104890138-7c749659a591?w=1920&h=1080&fit=crop',
@@ -402,6 +408,8 @@ export const businesses = {
       { platform: 'instagram', url: 'https://instagram.com/fitnesshub' },
       { platform: 'youtube', url: 'https://youtube.com/fitnesshub' }
     ],
+    google_business_url: 'https://search.google.com/local/writereview?placeid=ChIJUewm6BHXCDkRdClN6_t0Be4',
+    googlePlaceId: 'ChIJUewm6BHXCDkRdClN6_t0Be4',
 
     hero: {
       main: 'https://images.unsplash.com/photo-1534438327276-14e5300c3a48?w=1920&h=1080&fit=crop',
@@ -529,6 +537,8 @@ export const businesses = {
       { platform: 'instagram', url: 'https://instagram.com/beautylounge' },
       { platform: 'tiktok', url: 'https://tiktok.com/@beautylounge' }
     ],
+    google_business_url: 'https://search.google.com/local/writereview?placeid=ChIJUewm6BHXCDkRdClN6_t0Be4',
+    googlePlaceId: 'ChIJUewm6BHXCDkRdClN6_t0Be4',
 
     hero: {
       main: 'https://images.unsplash.com/photo-1560066984-138dadb4c035?w=1920&h=1080&fit=crop',
@@ -656,6 +666,8 @@ export const businesses = {
       { platform: 'linkedin', url: 'https://linkedin.com/company/techsolutions' },
       { platform: 'twitter', url: 'https://twitter.com/techsolutions' }
     ],
+    google_business_url: 'https://search.google.com/local/writereview?placeid=ChIJUewm6BHXCDkRdClN6_t0Be4',
+    googlePlaceId: 'ChIJUewm6BHXCDkRdClN6_t0Be4',
 
     hero: {
       main: 'https://images.unsplash.com/photo-1497366216548-37526070297c?w=1920&h=1080&fit=crop',
@@ -783,6 +795,8 @@ export const businesses = {
       { platform: 'instagram', url: 'https://instagram.com/coffeehouse' },
       { platform: 'facebook', url: 'https://facebook.com/coffeehouse' }
     ],
+    google_business_url: 'https://search.google.com/local/writereview?placeid=ChIJUewm6BHXCDkRdClN6_t0Be4',
+    googlePlaceId: 'ChIJUewm6BHXCDkRdClN6_t0Be4',
 
     hero: {
       main: 'https://images.unsplash.com/photo-1501339847302-ac426a4a7cbb?w=1920&h=1080&fit=crop',
@@ -910,6 +924,8 @@ export const businesses = {
       { platform: 'linkedin', url: 'https://linkedin.com/company/urbandental' },
       { platform: 'facebook', url: 'https://facebook.com/urbandental' }
     ],
+    google_business_url: 'https://search.google.com/local/writereview?placeid=ChIJUewm6BHXCDkRdClN6_t0Be4',
+    googlePlaceId: 'ChIJUewm6BHXCDkRdClN6_t0Be4',
 
     hero: {
       main: 'https://images.unsplash.com/photo-1588776814546-1ffcf47267a5?w=1920&h=1080&fit=crop',
@@ -1037,6 +1053,8 @@ export const businesses = {
       { platform: 'instagram', url: 'https://instagram.com/petparadise' },
       { platform: 'tiktok', url: 'https://tiktok.com/@petparadise' }
     ],
+    google_business_url: 'https://search.google.com/local/writereview?placeid=ChIJUewm6BHXCDkRdClN6_t0Be4',
+    googlePlaceId: 'ChIJUewm6BHXCDkRdClN6_t0Be4',
 
     hero: {
       main: 'https://images.unsplash.com/photo-1450778869180-41d0601e046e?w=1920&h=1080&fit=crop',
@@ -1164,6 +1182,8 @@ export const businesses = {
       { platform: 'instagram', url: 'https://instagram.com/greengrocers' },
       { platform: 'facebook', url: 'https://facebook.com/greengrocers' }
     ],
+    google_business_url: 'https://search.google.com/local/writereview?placeid=ChIJUewm6BHXCDkRdClN6_t0Be4',
+    googlePlaceId: 'ChIJUewm6BHXCDkRdClN6_t0Be4',
 
     hero: {
       main: 'https://images.unsplash.com/photo-1542838132-92c53300491e?w=1920&h=1080&fit=crop',
@@ -1274,6 +1294,148 @@ export const businesses = {
 
     qualities: ['Fresh', 'Organic', 'Healthy', 'Sustainable', 'Quality', 'Friendly'],
     feelings: ['Healthy', 'Happy', 'Satisfied', 'Confident', 'Energized']
+  },
+
+  'pizza-corner': {
+    id: 'pizza-corner',
+    name: "Pizza Corner",
+    logo: "🍕",
+    tagline: "Speed. Taste. Love.",
+    description: "The best pizza in town, served fresh and hot.",
+    address: "Food Street, Koramangala, Bangalore",
+    phone: "+91-9876543210",
+    email: "love@pizzacorner.com",
+    rating: 4.5,
+    reviewCount: 156,
+    social_media_links: [],
+    google_business_url: 'https://search.google.com/local/writereview?placeid=ChIJUewm6BHXCDkRdClN6_t0Be4',
+    googlePlaceId: 'ChIJUewm6BHXCDkRdClN6_t0Be4',
+
+    hero: {
+      main: 'https://images.unsplash.com/photo-1513104890138-7c749659a591?w=1920&h=1080&fit=crop',
+      overlay: 'linear-gradient(135deg, rgba(255, 100, 50, 0.8) 0%, rgba(200, 50, 50, 0.8) 100%)'
+    },
+
+    gallery: [
+      {
+        url: 'https://images.unsplash.com/photo-1574071318508-1cdbab80d002?w=800&h=600&fit=crop',
+        title: 'Classic Pepperoni',
+        category: 'food'
+      },
+      {
+        url: 'https://images.unsplash.com/photo-1595854341625-f33ee10dbf94?w=800&h=600&fit=crop',
+        title: 'Cozy Ambience',
+        category: 'interior'
+      },
+      {
+        url: 'https://images.unsplash.com/photo-1563379926898-05f4575a45d8?w=800&h=600&fit=crop',
+        title: 'Fresh Pasta',
+        category: 'food'
+      },
+      {
+        url: 'https://images.unsplash.com/photo-1555939594-58d7cb561ad1?w=800&h=600&fit=crop',
+        title: 'Chef at Work',
+        category: 'staff'
+      },
+      {
+        url: 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=800&h=600&fit=crop',
+        title: 'Healthy Salads',
+        category: 'food'
+      },
+      {
+        url: 'https://images.unsplash.com/photo-1551024709-8f23befc6f87?w=800&h=600&fit=crop',
+        title: 'Refreshing Drinks',
+        category: 'food'
+      }
+    ],
+
+    staff: [
+      {
+        name: 'Marco Rossi',
+        role: 'Head Chef',
+        image: 'https://images.unsplash.com/photo-1583394838336-acd977736f90?w=400&h=400&fit=crop',
+        experience: '20 years',
+        specialty: 'Authentic Italian Napoletana'
+      },
+      {
+        name: 'Sarah Jen',
+        role: 'Restaurant Manager',
+        image: 'https://images.unsplash.com/photo-1580489944761-15a19d654956?w=400&h=400&fit=crop',
+        experience: '8 years',
+        specialty: 'Customer Experience'
+      },
+      {
+        name: 'Luigi Verdi',
+        role: 'Sous Chef',
+        image: 'https://images.unsplash.com/photo-1577219491135-ce391730fb2c?w=400&h=400&fit=crop',
+        experience: '12 years',
+        specialty: 'Handmade Pasta'
+      }
+    ],
+
+    // FULL SERVICE OBJECTS FOR BEAUTIFUL BUSINESS PAGE
+    // LeaveReviewPage will be updated to handle these smarty
+    services: [
+      {
+        name: 'Gourmet Pizza',
+        price: '₹450',
+        duration: '15-20 min',
+        image: 'https://images.unsplash.com/photo-1604382354936-07c5d9983bd3?w=600&h=400&fit=crop',
+        description: 'Wood-fired, authentic Italian pizzas with fresh toppings.'
+      },
+      {
+        name: 'Handmade Pasta',
+        price: '₹350',
+        duration: '15 min',
+        image: 'https://images.unsplash.com/photo-1551183053-bf91a1d81141?w=600&h=400&fit=crop',
+        description: 'Freshly made pasta with rich, creamy sauces.'
+      },
+      {
+        name: 'Juicy Burgers',
+        price: '₹250',
+        duration: '10 min',
+        image: 'https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=600&h=400&fit=crop',
+        description: 'Grilled to perfection with premium cheese and veggies.'
+      },
+      {
+        name: 'Signature Drinks',
+        price: '₹150',
+        duration: 'Instant',
+        image: 'https://images.unsplash.com/photo-1513558161293-cdaf765ed2fd?w=600&h=400&fit=crop',
+        description: 'Refreshing mojitos, shakes, and soft drinks.'
+      },
+      {
+        name: 'Sweet Desserts',
+        price: '₹200',
+        duration: 'Ready',
+        image: 'https://images.unsplash.com/photo-1563729784474-d77dbb933a9e?w=600&h=400&fit=crop',
+        description: 'Tiramisu, cheesecake, and chocolate lava cake.'
+      },
+      {
+        name: 'Fresh Wraps',
+        price: '₹180',
+        duration: '10 min',
+        image: 'https://images.unsplash.com/photo-1626700051175-6818013e1d4f?w=600&h=400&fit=crop',
+        description: 'Healthy and filling wraps with zesty sauces.'
+      },
+      {
+        name: 'Green Salads',
+        price: '₹220',
+        duration: '10 min',
+        image: 'https://images.unsplash.com/photo-1512621776951-a57141f2eefd?w=600&h=400&fit=crop',
+        description: 'Locally sourced organic greens and dressings.'
+      },
+      {
+        name: 'Crispy Fries',
+        price: '₹120',
+        duration: '5 min',
+        image: 'https://images.unsplash.com/photo-1541592106381-b31e9677c0e5?w=600&h=400&fit=crop',
+        description: 'Golden fried potatoes with signature seasoning.'
+      }
+    ],
+
+    qualities: ['Tasty', 'Fast', 'Hot', 'Cheesy', 'Fresh', 'Crispy'],
+    feelings: ['Full', 'Happy', 'Satisfied', 'Excited']
   }
 };
 

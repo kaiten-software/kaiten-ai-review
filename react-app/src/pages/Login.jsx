@@ -1,32 +1,73 @@
-import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { motion } from 'framer-motion';
-import { LockClosedIcon, ShieldCheckIcon, UserIcon } from '@heroicons/react/24/solid';
+import { useState, useEffect } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
+import { motion, AnimatePresence } from 'framer-motion';
+import { LockClosedIcon, ShieldCheckIcon, UserIcon, BuildingStorefrontIcon } from '@heroicons/react/24/solid';
 import Logo from '../components/common/Logo';
 
-export default function AdminLogin() {
+export default function Login() {
     const navigate = useNavigate();
+    const location = useLocation();
+    const defaultMode = location.state?.defaultMode || 'admin';
+
+    const [loginMode, setLoginMode] = useState(defaultMode); // 'admin' or 'client'
     const [formData, setFormData] = useState({
-        email: 'admin@kaitensoftware.com',
-        password: 'admin123'
+        username: defaultMode === 'admin' ? 'admin@kaitensoftware.com' : 'pizzacorner',
+        password: defaultMode === 'admin' ? 'admin123' : 'demo123'
     });
     const [error, setError] = useState('');
     const [isLoading, setIsLoading] = useState(false);
+
+    // Update form data when mode changes
+    const handleModeSwitch = (mode) => {
+        setLoginMode(mode);
+        setError('');
+        if (mode === 'admin') {
+            setFormData({ username: 'admin@kaitensoftware.com', password: 'admin123' });
+        } else {
+            setFormData({ username: 'pizzacorner', password: 'demo123' });
+        }
+    };
 
     const handleSubmit = async (e) => {
         e.preventDefault();
         setIsLoading(true);
         setError('');
 
-        // Simulate API call
         setTimeout(() => {
-            // Simple authentication (in production, use proper backend)
-            if (formData.email === 'admin@kaitensoftware.com' && formData.password === 'admin123') {
-                sessionStorage.setItem('adminLoggedIn', 'true');
-                navigate('/admin/dashboard');
+            const username = formData.username.trim();
+            const password = formData.password.trim();
+
+            if (loginMode === 'admin') {
+                // Admin authentication
+                if (username === 'admin@kaitensoftware.com' && password === 'admin123') {
+                    sessionStorage.setItem('adminLoggedIn', 'true');
+                    // Clear client session to avoid conflicts
+                    sessionStorage.removeItem('clientLoggedIn');
+                    sessionStorage.removeItem('clientId');
+                    navigate('/admin/dashboard');
+                } else {
+                    setError('Invalid admin credentials');
+                    setIsLoading(false);
+                }
             } else {
-                setError('Invalid email or password');
-                setIsLoading(false);
+                // Client authentication logic
+                const validClients = {
+                    'pizzacorner': { password: 'demo123', id: 'pizza-corner' },
+                    'rajssalon': { password: 'salon456', id: 'rajs-salon' }
+                };
+
+                const client = validClients[username];
+
+                if (client && password === client.password) {
+                    sessionStorage.setItem('clientLoggedIn', 'true');
+                    sessionStorage.setItem('clientId', client.id);
+                    // Clear admin session just in case
+                    sessionStorage.removeItem('adminLoggedIn');
+                    navigate('/client/dashboard');
+                } else {
+                    setError('Invalid client credentials');
+                    setIsLoading(false);
+                }
             }
         }, 800);
     };
@@ -58,24 +99,39 @@ export default function AdminLogin() {
                 >
                     <Logo size="large" variant="full" className="mb-8" isDark={true} />
 
-                    <h1 className="text-5xl font-bold mb-6 leading-tight">
-                        Welcome to<br />
-                        <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-indigo-400">
-                            Admin Dashboard
-                        </span>
-                    </h1>
+                    <AnimatePresence mode="wait">
+                        <motion.div
+                            key={loginMode}
+                            initial={{ opacity: 0, y: 20 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            exit={{ opacity: 0, y: -20 }}
+                            transition={{ duration: 0.3 }}
+                        >
+                            <h1 className="text-5xl font-bold mb-6 leading-tight">
+                                Welcome to<br />
+                                <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-indigo-400">
+                                    {loginMode === 'admin' ? 'Admin Dashboard' : 'Client Portal'}
+                                </span>
+                            </h1>
 
-                    <p className="text-xl text-gray-300 mb-8 leading-relaxed">
-                        Manage your AI-powered review platform with advanced analytics,
-                        client management, and powerful automation tools.
-                    </p>
+                            <p className="text-xl text-gray-300 mb-8 leading-relaxed">
+                                {loginMode === 'admin'
+                                    ? 'Manage your AI-powered review platform with advanced analytics, client management, and powerful automation tools.'
+                                    : 'Access your business dashboard to view analytics, manage reviews, and track your growth.'}
+                            </p>
+                        </motion.div>
+                    </AnimatePresence>
 
                     <div className="space-y-4">
-                        {[
+                        {(loginMode === 'admin' ? [
                             { icon: <ShieldCheckIcon className="w-6 h-6" />, text: 'Secure Authentication' },
                             { icon: <UserIcon className="w-6 h-6" />, text: 'Role-Based Access' },
                             { icon: <LockClosedIcon className="w-6 h-6" />, text: 'End-to-End Encryption' }
-                        ].map((item, index) => (
+                        ] : [
+                            { icon: <BuildingStorefrontIcon className="w-6 h-6" />, text: 'Business Analytics' },
+                            { icon: <ShieldCheckIcon className="w-6 h-6" />, text: 'Review Management' },
+                            { icon: <UserIcon className="w-6 h-6" />, text: 'Customer Insights' }
+                        ]).map((item, index) => (
                             <motion.div
                                 key={index}
                                 initial={{ opacity: 0, x: -20 }}
@@ -102,27 +158,55 @@ export default function AdminLogin() {
                     {/* Mobile Logo */}
                     <div className="md:hidden text-center mb-8">
                         <Logo size="medium" variant="full" className="justify-center mb-4" isDark={true} />
-                        <h2 className="text-2xl font-bold text-white">Admin Login</h2>
+                        <h2 className="text-2xl font-bold text-white">Login</h2>
                     </div>
 
                     <div className="bg-white rounded-3xl shadow-2xl p-8 md:p-10">
+                        {/* Mode Toggle */}
+                        <div className="flex gap-2 mb-8 p-1 bg-gray-100 rounded-xl">
+                            <button
+                                type="button"
+                                onClick={() => handleModeSwitch('admin')}
+                                className={`flex-1 py-3 px-4 rounded-lg font-bold text-sm transition-all flex items-center justify-center gap-2 ${loginMode === 'admin'
+                                    ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-lg'
+                                    : 'text-gray-600 hover:text-gray-900'
+                                    }`}
+                            >
+                                <ShieldCheckIcon className="w-5 h-5" />
+                                Admin
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => handleModeSwitch('client')}
+                                className={`flex-1 py-3 px-4 rounded-lg font-bold text-sm transition-all flex items-center justify-center gap-2 ${loginMode === 'client'
+                                    ? 'bg-gradient-to-r from-orange-500 to-red-500 text-white shadow-lg'
+                                    : 'text-gray-600 hover:text-gray-900'
+                                    }`}
+                            >
+                                <BuildingStorefrontIcon className="w-5 h-5" />
+                                Client
+                            </button>
+                        </div>
+
                         <div className="mb-8">
                             <h2 className="text-3xl font-bold text-gray-900 mb-2">Sign In</h2>
-                            <p className="text-gray-600">Enter your credentials to access the dashboard</p>
+                            <p className="text-gray-600">
+                                {loginMode === 'admin' ? 'Access the admin dashboard' : 'Access your business portal'}
+                            </p>
                         </div>
 
                         <form onSubmit={handleSubmit} className="space-y-6">
                             <div>
                                 <label className="block text-sm font-semibold text-gray-700 mb-2">
-                                    Email Address
+                                    {loginMode === 'admin' ? 'Email Address' : 'Username'}
                                 </label>
                                 <div className="relative">
                                     <input
-                                        type="email"
-                                        value={formData.email}
-                                        onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                                        type="text"
+                                        value={formData.username}
+                                        onChange={(e) => setFormData({ ...formData, username: e.target.value })}
                                         className="w-full px-4 py-4 pl-12 rounded-xl border-2 border-gray-200 focus:border-indigo-500 focus:outline-none transition-all text-gray-900 placeholder-gray-400"
-                                        placeholder="admin@kaitensoftware.com"
+                                        placeholder={loginMode === 'admin' ? 'admin@kaitensoftware.com' : 'pizzacorner'}
                                         required
                                     />
                                     <UserIcon className="w-5 h-5 text-gray-400 absolute left-4 top-1/2 -translate-y-1/2" />
@@ -160,7 +244,10 @@ export default function AdminLogin() {
                             <button
                                 type="submit"
                                 disabled={isLoading}
-                                className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-bold py-4 px-6 rounded-xl hover:from-blue-700 hover:to-indigo-700 transition-all duration-300 flex items-center justify-center gap-3 shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed"
+                                className={`w-full font-bold py-4 px-6 rounded-xl transition-all duration-300 flex items-center justify-center gap-3 shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed ${loginMode === 'admin'
+                                    ? 'bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white'
+                                    : 'bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 text-white'
+                                    }`}
                             >
                                 {isLoading ? (
                                     <>
@@ -170,17 +257,29 @@ export default function AdminLogin() {
                                 ) : (
                                     <>
                                         <LockClosedIcon className="w-5 h-5" />
-                                        Sign In to Dashboard
+                                        Sign In to {loginMode === 'admin' ? 'Dashboard' : 'Portal'}
                                     </>
                                 )}
                             </button>
                         </form>
 
-                        <div className="mt-8 p-4 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl border border-blue-100">
+                        <div className={`mt-8 p-4 rounded-xl border ${loginMode === 'admin'
+                            ? 'bg-gradient-to-r from-blue-50 to-indigo-50 border-blue-100'
+                            : 'bg-gradient-to-r from-orange-50 to-red-50 border-orange-100'
+                            }`}>
                             <p className="text-sm font-semibold text-gray-700 mb-2">Demo Credentials:</p>
                             <div className="font-mono text-sm bg-white px-4 py-3 rounded-lg border border-gray-200">
-                                <p className="text-gray-600">Email: <span className="text-gray-900 font-semibold">admin@kaitensoftware.com</span></p>
-                                <p className="text-gray-600">Password: <span className="text-gray-900 font-semibold">admin123</span></p>
+                                {loginMode === 'admin' ? (
+                                    <>
+                                        <p className="text-gray-600">Email: <span className="text-gray-900 font-semibold">admin@kaitensoftware.com</span></p>
+                                        <p className="text-gray-600">Password: <span className="text-gray-900 font-semibold">admin123</span></p>
+                                    </>
+                                ) : (
+                                    <>
+                                        <p className="text-gray-600">Username: <span className="text-gray-900 font-semibold">pizzacorner</span></p>
+                                        <p className="text-gray-600">Password: <span className="text-gray-900 font-semibold">demo123</span></p>
+                                    </>
+                                )}
                             </div>
                         </div>
                     </div>

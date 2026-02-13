@@ -22,7 +22,7 @@ const Logo = ({ size = 'medium', variant = 'full', className = '', isDark = fals
                 <svg
                     width={currentSize.iconSize}
                     height={currentSize.iconSize}
-                    viewBox="0 0 120 120"
+                    viewBox="0 0 1024 1024"
                     fill="none"
                     xmlns="http://www.w3.org/2000/svg"
                 >
@@ -30,27 +30,34 @@ const Logo = ({ size = 'medium', variant = 'full', className = '', isDark = fals
                         <linearGradient id="ensoGradIcon" x1="0%" y1="0%" x2="100%" y2="100%">
                             <stop offset="0%" stopColor="#DC2626" />
                             <stop offset="50%" stopColor="#EF4444" />
-                            <stop offset="100%" stopColor="#DC2626" />
+                            <stop offset="100%" stopColor="#B91C1C" />
                         </linearGradient>
                     </defs>
 
-                    {/* Enso Circle - Main stroke */}
-                    <path
-                        d="M 60 10 C 75 10, 88 14, 98 23 C 106 31, 110 42, 110 60 C 110 75, 106 88, 97 98 C 88 107, 75 111, 60 111 C 45 111, 32 107, 23 98 C 14 89, 10 76, 10 60 C 10 45, 14 32, 23 23 C 32 14, 45 10, 60 10 L 60 12"
+                    {/* Main Enso Circle Path */}
+                    <path d="M 512 50 C 650 50, 780 100, 870 200 C 950 290, 990 410, 990 512 C 990 650, 940 780, 840 870 C 750 950, 630 990, 512 990 C 380 990, 250 940, 160 850 C 70 760, 30 640, 30 512 C 30 380, 80 250, 170 160 C 260 70, 380 30, 512 30 L 512 50"
                         stroke="url(#ensoGradIcon)"
-                        strokeWidth="10"
+                        strokeWidth="80"
                         fill="none"
                         strokeLinecap="round"
                         opacity="0.95"
                     />
 
-                    {/* Inner highlight */}
-                    <path
-                        d="M 60 15 C 73 15, 84 19, 92 28 C 99 36, 103 47, 103 60 C 103 73, 99 84, 91 92 C 83 100, 72 104, 60 104 C 47 104, 36 100, 28 92 C 20 84, 16 73, 16 60 C 16 47, 20 36, 28 28 C 36 20, 47 16, 60 16"
-                        stroke="rgba(255,255,255,0.4)"
-                        strokeWidth="1.5"
+                    {/* Inner highlight stroke */}
+                    <path d="M 512 80 C 630 80, 740 120, 820 210 C 890 290, 930 390, 930 512 C 930 630, 890 740, 810 820 C 730 900, 620 940, 512 940 C 400 940, 290 900, 210 820 C 130 740, 90 630, 90 512 C 90 400, 130 290, 210 210 C 290 130, 400 90, 512 90"
+                        stroke="rgba(255,255,255,0.3)"
+                        strokeWidth="4"
                         fill="none"
                         strokeLinecap="round"
+                    />
+
+                    {/* Outer brush texture */}
+                    <path d="M 512 20 C 660 20, 800 80, 900 190 C 980 280, 1020 400, 1020 512 C 1020 660, 960 800, 860 900 C 770 980, 650 1020, 512 1020 C 370 1020, 230 960, 130 860 C 50 770, 10 650, 10 512 C 10 370, 70 230, 160 130 C 250 50, 370 10, 512 10"
+                        stroke="url(#ensoGradIcon)"
+                        strokeWidth="15"
+                        fill="none"
+                        strokeLinecap="round"
+                        opacity="0.4"
                     />
                 </svg>
             </motion.div>
@@ -67,42 +74,39 @@ const Logo = ({ size = 'medium', variant = 'full', className = '', isDark = fals
             <svg
                 width={currentSize.iconSize}
                 height={currentSize.iconSize}
-                viewBox="0 0 120 120"
+                viewBox="0 0 1024 1024"
                 fill="none"
                 xmlns="http://www.w3.org/2000/svg"
             >
                 <defs>
-                    <linearGradient id="ensoGradFull" x1="0%" y1="0%" x2="100%" y2="100%">
+                    <linearGradient id={`${variant === 'icon' ? 'ensoGradIcon' : 'ensoGradFull'}`} x1="0%" y1="0%" x2="100%" y2="100%">
                         <stop offset="0%" stopColor="#DC2626" />
                         <stop offset="50%" stopColor="#EF4444" />
-                        <stop offset="100%" stopColor="#DC2626" />
+                        <stop offset="100%" stopColor="#B91C1C" />
                     </linearGradient>
                 </defs>
 
-                {/* Enso Circle - Main brush stroke */}
-                <path
-                    d="M 60 8 C 76 8, 90 13, 100 24 C 109 34, 113 47, 113 60 C 113 76, 109 90, 99 100 C 89 109, 76 113, 60 113 C 44 113, 30 109, 20 99 C 11 89, 7 76, 7 60 C 7 44, 11 30, 21 20 C 31 11, 44 7, 60 7 L 60 10"
-                    stroke="url(#ensoGradFull)"
-                    strokeWidth="11"
+                {/* Main Enso Circle Path */}
+                <path d="M 512 50 C 650 50, 780 100, 870 200 C 950 290, 990 410, 990 512 C 990 650, 940 780, 840 870 C 750 950, 630 990, 512 990 C 380 990, 250 940, 160 850 C 70 760, 30 640, 30 512 C 30 380, 80 250, 170 160 C 260 70, 380 30, 512 30 L 512 50"
+                    stroke={`url(#${variant === 'icon' ? 'ensoGradIcon' : 'ensoGradFull'})`}
+                    strokeWidth="80"
                     fill="none"
                     strokeLinecap="round"
                     opacity="0.95"
                 />
 
                 {/* Inner highlight stroke */}
-                <path
-                    d="M 60 14 C 74 14, 86 18, 94 28 C 101 37, 105 48, 105 60 C 105 74, 101 86, 93 94 C 85 102, 73 106, 60 106 C 46 106, 34 102, 26 94 C 18 86, 14 74, 14 60 C 14 46, 18 34, 26 26 C 34 18, 46 14, 60 14"
-                    stroke="rgba(255,255,255,0.5)"
-                    strokeWidth="1.5"
+                <path d="M 512 80 C 630 80, 740 120, 820 210 C 890 290, 930 390, 930 512 C 930 630, 890 740, 810 820 C 730 900, 620 940, 512 940 C 400 940, 290 900, 210 820 C 130 740, 90 630, 90 512 C 90 400, 130 290, 210 210 C 290 130, 400 90, 512 90"
+                    stroke="rgba(255,255,255,0.3)"
+                    strokeWidth="4"
                     fill="none"
                     strokeLinecap="round"
                 />
 
-                {/* Outer texture stroke */}
-                <path
-                    d="M 60 4 C 78 4, 93 10, 104 22 C 113 32, 117 45, 117 60 C 117 78, 111 93, 101 104 C 91 113, 78 117, 60 117 C 42 117, 27 111, 16 101 C 7 91, 3 78, 3 60 C 3 42, 9 27, 19 16 C 29 7, 42 3, 60 3"
-                    stroke="url(#ensoGradFull)"
-                    strokeWidth="2"
+                {/* Outer brush texture */}
+                <path d="M 512 20 C 660 20, 800 80, 900 190 C 980 280, 1020 400, 1020 512 C 1020 660, 960 800, 860 900 C 770 980, 650 1020, 512 1020 C 370 1020, 230 960, 130 860 C 50 770, 10 650, 10 512 C 10 370, 70 230, 160 130 C 250 50, 370 10, 512 10"
+                    stroke={`url(#${variant === 'icon' ? 'ensoGradIcon' : 'ensoGradFull'})`}
+                    strokeWidth="15"
                     fill="none"
                     strokeLinecap="round"
                     opacity="0.4"

@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { motion } from 'framer-motion';
-import { Bars3Icon, XMarkIcon } from '@heroicons/react/24/outline';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Bars3Icon, XMarkIcon, ArrowRightOnRectangleIcon } from '@heroicons/react/24/outline';
 import Logo from './Logo';
 
 export default function Navbar() {
@@ -20,7 +20,6 @@ export default function Navbar() {
     const navLinks = [
         { name: 'Home', path: '/' },
         { name: 'Give Review', path: '/#businesses' },
-        { name: 'Pricing', path: '/#pricing' },
         { name: 'Features', path: '/#features' },
     ];
 
@@ -34,7 +33,11 @@ export default function Navbar() {
             <div className="container-custom">
                 <div className="flex items-center justify-between h-20">
                     {/* Logo */}
-                    <Link to="/" className="flex items-center">
+                    <Link
+                        to="/"
+                        onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+                        className="flex items-center"
+                    >
                         <Logo size="small" variant="full" isDark={false} />
                     </Link>
 
@@ -50,11 +53,13 @@ export default function Navbar() {
                                 <span className="absolute bottom-0 left-0 w-0 h-0.5 bg-gradient-to-r from-cyan-500 to-purple-600 group-hover:w-full transition-all duration-300"></span>
                             </a>
                         ))}
+
                         <button
-                            onClick={() => navigate('/admin/login')}
-                            className="btn btn-primary"
+                            onClick={() => navigate('/login')}
+                            className="btn btn-primary flex items-center gap-2"
                         >
-                            Admin Login
+                            Login
+                            <ArrowRightOnRectangleIcon className="w-4 h-4" />
                         </button>
                     </div>
 
@@ -89,15 +94,19 @@ export default function Navbar() {
                                 {link.name}
                             </a>
                         ))}
-                        <button
-                            onClick={() => {
-                                navigate('/admin/login');
-                                setIsMobileMenuOpen(false);
-                            }}
-                            className="btn btn-primary w-full mt-4"
-                        >
-                            Admin Login
-                        </button>
+
+                        <div className="mt-4">
+                            <button
+                                onClick={() => {
+                                    navigate('/login');
+                                    setIsMobileMenuOpen(false);
+                                }}
+                                className="w-full px-4 py-3 flex items-center gap-3 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-xl font-bold justify-center"
+                            >
+                                <ArrowRightOnRectangleIcon className="w-5 h-5" />
+                                Login
+                            </button>
+                        </div>
                     </motion.div>
                 )}
             </div>

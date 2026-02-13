@@ -1,18 +1,20 @@
 import { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { getBusinessById } from '../data/businesses';
 import { getClientById } from '../lib/supabase';
 import { addReview } from '../lib/supabase';
 import Navbar from '../components/common/Navbar';
 import Footer from '../components/common/Footer';
-import { StarIcon, ArrowLeftIcon, SparklesIcon } from '@heroicons/react/24/solid';
+import { ArrowLeftIcon, StarIcon } from '@heroicons/react/24/solid';
 
 export default function LeaveReviewPage() {
     const { businessId } = useParams();
     const navigate = useNavigate();
+    const location = useLocation();
     const [business, setBusiness] = useState(null);
     const [loading, setLoading] = useState(true);
+    const [hoverRating, setHoverRating] = useState(0);
 
     // Animation Variants
     const containerVariants = {
@@ -56,6 +58,7 @@ export default function LeaveReviewPage() {
                             qualities: (result.data.qualities?.length > 0) ? result.data.qualities : staticBusiness.qualities,
                             feelings: (result.data.feelings?.length > 0) ? result.data.feelings : staticBusiness.feelings,
                             searchKeywords: (result.data.searchKeywords?.length > 0) ? result.data.searchKeywords : staticBusiness.searchKeywords,
+                            google_business_url: (businessIdForDb === 'raj-salon') ? staticBusiness.google_business_url : (result.data.google_business_url || staticBusiness.google_business_url),
                             gallery: staticBusiness.gallery || result.data.gallery,
                             hero: staticBusiness.hero || result.data.hero,
                             rating: result.data.rating || staticBusiness.rating,
@@ -81,7 +84,7 @@ export default function LeaveReviewPage() {
     }, [businessId, navigate]);
 
     const [formData, setFormData] = useState({
-        service: '',
+        services: [],
         staff: '',
         qualities: [],
         feelings: [],
@@ -89,6 +92,53 @@ export default function LeaveReviewPage() {
         additional: '',
         rating: 0
     });
+
+    // Restore form data only if "Back" button was used (isEditing: true)
+    useEffect(() => {
+        const loadStoredData = () => {
+            // Check if coming back from generate/private feedback using navigation state
+            if (!location.state?.isEditing) {
+                // Not editing - user refreshed or came from home
+                return;
+            }
+
+            try {
+                const storedReview = sessionStorage.getItem('reviewData');
+                const storedFeedback = sessionStorage.getItem('privateFeedback');
+                let dataToLoad = null;
+
+                if (storedReview) {
+                    const parsed = JSON.parse(storedReview);
+                    // Check if the stored data is for the current business
+                    if (String(parsed.businessId) === String(businessId)) {
+                        dataToLoad = parsed;
+                    }
+                } else if (storedFeedback) {
+                    const parsed = JSON.parse(storedFeedback);
+                    if (String(parsed.businessId) === String(businessId)) {
+                        dataToLoad = parsed;
+                    }
+                }
+
+                if (dataToLoad) {
+                    setFormData(prev => ({
+                        ...prev,
+                        services: dataToLoad.services || (dataToLoad.service ? [dataToLoad.service] : []),
+                        staff: dataToLoad.staff || '',
+                        qualities: dataToLoad.qualities || [],
+                        feelings: dataToLoad.feelings || [],
+                        searchKeywords: dataToLoad.searchKeywords || [],
+                        additional: dataToLoad.additional || '',
+                        rating: dataToLoad.rating || 0
+                    }));
+                }
+            } catch (err) {
+                console.error("Error loading stored form data:", err);
+            }
+        };
+
+        loadStoredData();
+    }, [businessId, location.state]);
 
     const feelingsWithEmojis = [
         { text: 'Happy', emoji: '😊' },
@@ -99,10 +149,6 @@ export default function LeaveReviewPage() {
         { text: 'Relaxed', emoji: '😎' },
         { text: 'Delighted', emoji: '🥰' },
         { text: 'Amazed', emoji: '🤩' }
-    ];
-
-    const searchKeywords = business?.searchKeywords || business?.search_keywords || [
-        'Best service', 'Top-rated', 'Professional', 'Highly recommended', 'Quality service', 'Excellent', 'Best in town', 'Five-star'
     ];
 
     const safeBusinessData = business ? {
@@ -119,16 +165,15 @@ export default function LeaveReviewPage() {
         }
     } : null;
 
-    if (loading) return <div className="min-h-screen flex items-center justify-center bg-gray-50"><div className="text-4xl animate-bounce">✨</div></div>;
+    if (loading) return <div className="min-h-screen flex items-center justify-center bg-gray-900"><div className="text-4xl animate-bounce">✨</div></div>;
     if (!safeBusinessData || !safeBusinessData.id) return null;
 
     const displayBusiness = safeBusinessData;
 
-    const toggleService = (service) => setFormData({ ...formData, service: formData.service === service ? '' : service });
+    const toggleService = (service) => setFormData(p => ({ ...p, services: p.services.includes(service) ? p.services.filter(s => s !== service) : [...p.services, service] }));
     const toggleStaff = (staffName) => setFormData({ ...formData, staff: formData.staff === staffName ? '' : staffName });
     const toggleQuality = (quality) => setFormData(p => ({ ...p, qualities: p.qualities.includes(quality) ? p.qualities.filter(q => q !== quality) : [...p.qualities, quality] }));
     const toggleFeeling = (feeling) => setFormData(p => ({ ...p, feelings: p.feelings.includes(feeling) ? p.feelings.filter(f => f !== feeling) : [...p.feelings, feeling] }));
-    const toggleSearchKeyword = (keyword) => setFormData(p => ({ ...p, searchKeywords: p.searchKeywords.includes(keyword) ? p.searchKeywords.filter(k => k !== keyword) : [...p.searchKeywords, keyword] }));
     const handleRatingClick = (rating) => setFormData({ ...formData, rating });
 
     const handleSubmit = async (e) => {
@@ -144,7 +189,7 @@ export default function LeaveReviewPage() {
             review_text: formData.additional || 'Great experience!',
             qualities: formData.qualities,
             feelings: formData.feelings,
-            service_used: formData.service || null,
+            service_used: formData.services.length > 0 ? formData.services.join(', ') : null,
             staff_member: formData.staff || null,
             posted_to_google: false,
             is_public: formData.rating > 3
@@ -159,146 +204,230 @@ export default function LeaveReviewPage() {
             console.error('Database error:', error);
         }
 
-        if (formData.rating <= 3) {
-            sessionStorage.setItem('privateFeedback', JSON.stringify({ businessId: businessIdForDb, businessName: displayBusiness.business_name || displayBusiness.name, ...formData }));
-            navigate('/private-feedback');
-        } else {
-            sessionStorage.setItem('reviewData', JSON.stringify({
-                businessId: businessIdForDb,
-                businessName: displayBusiness.business_name || displayBusiness.name,
-                businessLogo: displayBusiness.logo,
-                googleBusinessUrl: displayBusiness.google_business_url || null,
-                socialMediaLinks: displayBusiness.social_media_links || [],
-                ...formData
-            }));
-            navigate('/review-generated');
-        }
+        const commonData = {
+            businessId: businessIdForDb,
+            businessName: displayBusiness.business_name || displayBusiness.name,
+            businessLogo: displayBusiness.logo,
+            hero: displayBusiness.hero,
+            ...formData
+        };
+
+        // Store data for the next page
+        sessionStorage.setItem('reviewData', JSON.stringify({
+            ...commonData,
+            googleBusinessUrl: displayBusiness.google_business_url || null,
+            socialMediaLinks: displayBusiness.social_media_links || [],
+        }));
+        navigate('/review-generated');
     };
 
     return (
-        <div className="min-h-screen relative font-sans text-gray-800 overflow-hidden bg-slate-50">
-            {/* Clean Professional Background */}
-            <div className="fixed inset-0 -z-10 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-slate-100 via-white to-gray-100" />
+        <div className="min-h-screen relative overflow-x-hidden font-sans">
+            {/* Dynamic Business Background */}
+            <div className="fixed inset-0 -z-20">
+                <AnimatePresence mode="wait">
+                    <motion.img
+                        key={displayBusiness.hero.main}
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        transition={{ duration: 1 }}
+                        src={displayBusiness.hero.main}
+                        alt="Background"
+                        className="w-full h-full object-cover"
+                    />
+                </AnimatePresence>
+            </div>
 
-            {/* Simplified Header */}
-            <motion.div
-                initial={{ y: -100 }} animate={{ y: 0 }} transition={{ type: "spring", stiffness: 100 }}
-                className="fixed top-0 left-0 right-0 z-40 bg-white/90 backdrop-blur-md border-b border-gray-100 shadow-sm"
-            >
-                <div className="container-custom py-4 flex items-center justify-between">
-                    <button onClick={() => navigate(`/business/${businessId}`)} className="group flex items-center gap-2 text-gray-500 hover:text-slate-900 transition-colors font-medium">
-                        <div className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center group-hover:bg-slate-200 transition-colors">
-                            <ArrowLeftIcon className="w-4 h-4" />
-                        </div>
-                        <span>Back</span>
-                    </button>
-                    <div className="flex items-center gap-3">
-                        <motion.div whileHover={{ rotate: 10 }} className="text-3xl filter drop-shadow-md">{displayBusiness.logo}</motion.div>
-                        <div className="hidden sm:block">
-                            <h1 className="text-lg font-bold leading-none">{displayBusiness.name}</h1>
-                        </div>
+            {/* Dark Overlay for Readability */}
+            <div className="fixed inset-0 -z-10 bg-black/60 backdrop-blur-sm" />
+
+            {/* Custom Navbar for Review Page with Back Button */}
+            <div className="fixed top-0 left-0 right-0 h-20 bg-white/95 backdrop-blur-md z-40 border-b border-slate-100/50 px-4 md:px-8 flex items-center justify-between">
+                <button
+                    onClick={() => navigate('/')}
+                    className="flex items-center gap-2 text-slate-600 hover:text-indigo-600 font-bold transition-colors group"
+                >
+                    <div className="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center group-hover:bg-indigo-50 transition-colors">
+                        <ArrowLeftIcon className="w-5 h-5 group-hover:-translate-x-0.5 transition-transform" />
                     </div>
-                    <div className="w-16"></div>
-                </div>
-            </motion.div>
+                    <span className="text-sm uppercase tracking-wider">Back</span>
+                </button>
 
-            {/* Main Content */}
-            <main className="container-custom pt-32 pb-20 max-w-4xl">
+                <div className="font-bold text-lg text-slate-800 hidden sm:block">
+                    {displayBusiness.name}
+                </div>
+            </div>
+
+            {/* Main Content Container - Centered and constrained */}
+            <main className="pt-24 pb-20 px-4 md:px-8 max-w-3xl mx-auto w-full">
                 <motion.div
                     initial="hidden"
                     animate="visible"
                     variants={containerVariants}
-                    className="relative"
+                    className="w-full"
                 >
-                    {/* Header */}
-                    <motion.div variants={itemVariants} className="text-center mb-12 relative">
-                        <h2 className="text-sm font-bold tracking-[0.3em] text-slate-500 uppercase mb-2">Feedback</h2>
-                        <h3 className="text-4xl md:text-5xl font-black text-slate-900 mb-4 tracking-tight">
-                            Share Your Experience
-                        </h3>
-                        <p className="text-lg text-slate-500 max-w-xl mx-auto">
-                            Your feedback helps us provide better service.
-                        </p>
+                    {/* Header Text */}
+                    <motion.div variants={itemVariants} className="text-center mb-10">
+                        <span className="text-xs font-bold tracking-[0.2em] text-white/80 uppercase mb-3 block drop-shadow-sm">
+                            We value your feedback
+                        </span>
+                        <h1 className="text-3xl md:text-5xl font-black text-white mb-4 leading-tight drop-shadow-lg">
+                            How was your experience at<br />
+                            <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-300 to-violet-300">
+                                {displayBusiness.name}?
+                            </span>
+                        </h1>
                     </motion.div>
 
-                    {/* Form Card */}
+                    {/* Card Container */}
                     <motion.div
                         variants={itemVariants}
-                        className="bg-white border border-gray-200 rounded-[2.5rem] p-8 md:p-12 shadow-2xl shadow-slate-200/50 relative overflow-hidden"
+                        className="bg-white rounded-3xl shadow-xl shadow-slate-200/50 border border-slate-100 p-6 md:p-10 relative overflow-hidden"
                     >
-                        <form onSubmit={handleSubmit} className="space-y-12">
+                        {/* Decorative Background Blob */}
+                        <div className="absolute top-0 right-0 w-64 h-64 bg-gradient-to-br from-indigo-50/50 to-transparent rounded-bl-full -z-10" />
+
+                        <form onSubmit={handleSubmit} className="space-y-10">
 
                             {/* Service Selection */}
                             {displayBusiness.services?.length > 0 && (
                                 <motion.div variants={itemVariants}>
-                                    <label className="text-xl font-bold text-slate-800 mb-6 flex items-center gap-3">
-                                        <span className="w-8 h-8 rounded-full bg-slate-100 text-slate-600 flex items-center justify-center text-sm font-bold">1</span>
-                                        Which service did you use?
+                                    <label className="text-lg font-bold text-slate-800 mb-5 flex items-center gap-3">
+                                        <span className="w-8 h-8 rounded-full bg-slate-900 text-white flex items-center justify-center text-sm font-bold shadow-lg shrink-0">1</span>
+                                        What services did you use?
                                     </label>
-                                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
-                                        {displayBusiness.services.map((service, index) => (
-                                            <motion.button
-                                                key={index}
-                                                type="button"
-                                                whileHover={{ scale: 1.02 }}
-                                                whileTap={{ scale: 0.98 }}
-                                                onClick={() => toggleService(service.name)}
-                                                className={`relative overflow-hidden group p-4 rounded-xl font-semibold text-center border-2 transition-all duration-300 ${formData.service === service.name
-                                                    ? 'border-transparent bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-xl shadow-indigo-500/20'
-                                                    : 'border-slate-100 bg-white text-slate-600 hover:border-blue-200 hover:bg-blue-50/30'
-                                                    }`}
-                                            >
-                                                <span className="relative z-10 text-sm md:text-base">{service.name}</span>
-                                            </motion.button>
-                                        ))}
-                                    </div>
+
+                                    {(() => {
+                                        const isPizzaCorner = (displayBusiness.id === 'pizza-corner' || displayBusiness.name.toLowerCase().includes('pizza'));
+                                        const hasImages = !isPizzaCorner && displayBusiness.services.some(s => typeof s === 'object' && s?.image);
+
+                                        return (
+                                            <div className={hasImages ? "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4" : "grid grid-cols-2 sm:flex sm:flex-wrap gap-3"}>
+                                                {displayBusiness.services.map((service, index) => {
+                                                    const isObject = typeof service === 'object' && service !== null;
+                                                    const name = isObject ? service.name : service;
+                                                    const price = isObject && service.price ? service.price : null;
+                                                    const image = isObject && service.image ? service.image : null;
+                                                    const isSelected = formData.services.includes(name);
+
+                                                    if (!hasImages) {
+                                                        // Bubble Style - Mobile Optimized
+                                                        return (
+                                                            <motion.button
+                                                                key={index}
+                                                                type="button"
+                                                                whileHover={{ scale: 1.02 }}
+                                                                whileTap={{ scale: 0.98 }}
+                                                                onClick={() => toggleService(name)}
+                                                                className={`py-3 px-4 rounded-xl font-bold text-sm transition-all shadow-sm border w-full sm:w-auto flex justify-center items-center text-center ${isSelected
+                                                                    ? 'bg-slate-900 text-white border-slate-900 shadow-slate-900/30'
+                                                                    : 'bg-white text-slate-600 border-slate-200 hover:border-slate-400 hover:bg-slate-50'
+                                                                    }`}
+                                                            >
+                                                                {name}
+                                                            </motion.button>
+                                                        );
+                                                    }
+
+                                                    // Card Style
+                                                    return (
+                                                        <motion.button
+                                                            key={index}
+                                                            type="button"
+                                                            whileHover={{ scale: 1.02 }}
+                                                            whileTap={{ scale: 0.98 }}
+                                                            onClick={() => toggleService(name)}
+                                                            className={`relative overflow-hidden group rounded-2xl font-semibold text-center border transition-all duration-300 flex flex-col ${isSelected
+                                                                ? 'border-indigo-600 bg-indigo-600 text-white shadow-xl shadow-indigo-500/30'
+                                                                : 'border-slate-200 bg-slate-50 text-slate-600 hover:border-indigo-300 hover:bg-white'
+                                                                }`}
+                                                        >
+                                                            {image ? (
+                                                                <div className="w-full h-32 relative">
+                                                                    <img
+                                                                        src={image}
+                                                                        alt={name}
+                                                                        className="w-full h-full object-cover"
+                                                                        onError={(e) => {
+                                                                            e.target.style.display = 'none';
+                                                                            e.target.nextSibling.style.display = 'flex';
+                                                                        }}
+                                                                    />
+                                                                    <div className="hidden absolute inset-0 bg-slate-100 items-center justify-center text-3xl">
+                                                                        ✂️
+                                                                    </div>
+                                                                    {isSelected && <div className="absolute inset-0 bg-indigo-600/20 mix-blend-multiply" />}
+                                                                </div>
+                                                            ) : null}
+                                                            <div className="p-4 flex flex-col items-center justify-center flex-grow w-full">
+                                                                <span className="relative z-10 text-sm font-bold">{name}</span>
+
+                                                            </div>
+                                                        </motion.button>
+                                                    );
+                                                })}
+                                            </div>
+                                        );
+                                    })()}
                                 </motion.div>
                             )}
 
                             {/* Staff Selection */}
                             {displayBusiness.staff?.length > 0 && (
                                 <motion.div variants={itemVariants}>
-                                    <label className="text-xl font-bold text-slate-800 mb-6 flex items-center gap-3">
-                                        <span className="w-8 h-8 rounded-full bg-slate-100 text-slate-600 flex items-center justify-center text-sm font-bold">2</span>
-                                        Who served you? <span className="text-sm font-normal text-gray-400 ml-auto">(Optional)</span>
+                                    <label className="text-lg font-bold text-slate-800 mb-5 flex items-center gap-3">
+                                        <span className="w-8 h-8 rounded-full bg-slate-900 text-white flex items-center justify-center text-sm font-bold shadow-lg shrink-0">2</span>
+                                        Who served you?
                                     </label>
-                                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
-                                        {displayBusiness.staff.map((member, index) => (
-                                            <motion.button
-                                                key={index}
-                                                type="button"
-                                                whileHover={{ scale: 1.02 }}
-                                                whileTap={{ scale: 0.98 }}
-                                                onClick={() => toggleStaff(member.name)}
-                                                className={`p-4 rounded-xl font-semibold text-center border-2 transition-all duration-300 ${formData.staff === member.name
-                                                    ? 'border-transparent bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-xl shadow-indigo-500/20'
-                                                    : 'border-slate-100 bg-white text-slate-600 hover:border-blue-200 hover:bg-blue-50/30'
-                                                    }`}
-                                            >
-                                                <span className="text-sm md:text-base">{member.name}</span>
-                                            </motion.button>
-                                        ))}
+                                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                                        {displayBusiness.staff.map((member, index) => {
+                                            const isObject = typeof member === 'object' && member !== null;
+                                            const name = isObject ? member.name : member;
+                                            const role = isObject ? member.role : null;
+                                            const isSelected = formData.staff === name;
+
+                                            return (
+                                                <motion.button
+                                                    key={index}
+                                                    type="button"
+                                                    whileHover={{ scale: 1.02 }}
+                                                    whileTap={{ scale: 0.98 }}
+                                                    onClick={() => toggleStaff(name)}
+                                                    className={`p-4 rounded-2xl font-semibold text-center border transition-all duration-300 flex flex-col items-center justify-center ${isSelected
+                                                        ? 'border-indigo-600 bg-indigo-600 text-white shadow-xl shadow-indigo-500/30'
+                                                        : 'border-slate-200 bg-slate-50 text-slate-600 hover:border-indigo-300 hover:bg-white'
+                                                        }`}
+                                                >
+                                                    <span className="text-sm font-bold">{name}</span>
+                                                    {role && (
+                                                        <span className={`text-[10px] uppercase tracking-wider mt-1 ${isSelected ? 'text-indigo-200' : 'text-slate-400'}`}>
+                                                            {role}
+                                                        </span>
+                                                    )}
+                                                </motion.button>
+                                            );
+                                        })}
                                     </div>
                                 </motion.div>
                             )}
 
                             {/* Qualities */}
                             <motion.div variants={itemVariants}>
-                                <label className="text-xl font-bold text-slate-800 mb-6 flex items-center gap-3">
-                                    <span className="w-8 h-8 rounded-full bg-slate-100 text-slate-600 flex items-center justify-center text-sm font-bold">3</span>
+                                <label className="text-lg font-bold text-slate-800 mb-5 flex items-center gap-3">
+                                    <span className="w-8 h-8 rounded-full bg-slate-900 text-white flex items-center justify-center text-sm font-bold shadow-lg shrink-0">3</span>
                                     Quality of Work
                                 </label>
-                                <div className="flex flex-wrap gap-3">
+                                <div className="grid grid-cols-2 sm:flex sm:flex-wrap gap-3">
                                     {displayBusiness.qualities.map((quality, index) => (
                                         <motion.button
                                             key={index}
                                             type="button"
-                                            whileHover={{ scale: 1.05 }}
+                                            whileHover={{ scale: 1.03 }}
                                             whileTap={{ scale: 0.95 }}
                                             onClick={() => toggleQuality(quality)}
-                                            className={`px-6 py-3 rounded-full font-medium text-sm transition-all border-2 ${formData.qualities.includes(quality)
-                                                ? 'border-transparent bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-lg shadow-indigo-500/20'
-                                                : 'border-slate-100 bg-white text-slate-500 hover:border-blue-200 hover:text-blue-700'
+                                            className={`px-4 py-3 rounded-xl font-medium text-sm transition-all border flex justify-center items-center text-center ${formData.qualities.includes(quality)
+                                                ? 'border-indigo-600 bg-indigo-600 text-white shadow-lg shadow-indigo-500/25'
+                                                : 'border-slate-200 bg-slate-50 text-slate-600 hover:border-indigo-300 hover:bg-white'
                                                 }`}
                                         >
                                             {quality}
@@ -309,24 +438,24 @@ export default function LeaveReviewPage() {
 
                             {/* Feelings */}
                             <motion.div variants={itemVariants}>
-                                <label className="text-xl font-bold text-slate-800 mb-6 flex items-center gap-3">
-                                    <span className="w-8 h-8 rounded-full bg-slate-100 text-slate-600 flex items-center justify-center text-sm font-bold">4</span>
-                                    How did you feel?
+                                <label className="text-lg font-bold text-slate-800 mb-5 flex items-center gap-3">
+                                    <span className="w-8 h-8 rounded-full bg-slate-900 text-white flex items-center justify-center text-sm font-bold shadow-lg shrink-0">4</span>
+                                    Vibe check
                                 </label>
-                                <div className="flex flex-wrap gap-3">
+                                <div className="grid grid-cols-2 sm:flex sm:flex-wrap gap-3">
                                     {feelingsWithEmojis.map((feeling, index) => (
                                         <motion.button
                                             key={index}
                                             type="button"
-                                            whileHover={{ scale: 1.05 }}
+                                            whileHover={{ scale: 1.03 }}
                                             whileTap={{ scale: 0.95 }}
                                             onClick={() => toggleFeeling(feeling.text)}
-                                            className={`px-6 py-3 rounded-full font-medium text-sm transition-all border-2 ${formData.feelings.includes(feeling.text)
-                                                ? 'border-transparent bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-lg shadow-indigo-500/20'
-                                                : 'border-slate-100 bg-white text-slate-500 hover:border-blue-200 hover:text-blue-700'
+                                            className={`px-4 py-3 rounded-xl font-medium text-sm transition-all border flex justify-center items-center text-center ${formData.feelings.includes(feeling.text)
+                                                ? 'border-indigo-600 bg-indigo-600 text-white shadow-lg shadow-indigo-500/25'
+                                                : 'border-slate-200 bg-slate-50 text-slate-600 hover:border-indigo-300 hover:bg-white'
                                                 }`}
                                         >
-                                            <span className="mr-2 opacity-80">{feeling.emoji}</span>
+                                            <span className="mr-2 opacity-90">{feeling.emoji}</span>
                                             {feeling.text}
                                         </motion.button>
                                     ))}
@@ -335,64 +464,95 @@ export default function LeaveReviewPage() {
 
                             {/* Additional Comments */}
                             <motion.div variants={itemVariants}>
-                                <label className="text-xl font-bold text-slate-800 mb-6 flex items-center gap-3">
-                                    <span className="w-8 h-8 rounded-full bg-slate-100 text-slate-600 flex items-center justify-center text-sm font-bold">5</span>
-                                    Any extra details?
+                                <label className="text-lg font-bold text-slate-800 mb-5 flex items-center gap-3">
+                                    <span className="w-8 h-8 rounded-full bg-slate-900 text-white flex items-center justify-center text-sm font-bold shadow-lg shrink-0">5</span>
+                                    Anything else?
                                 </label>
-                                <div className="relative">
+                                <div className="relative group">
+                                    <div className="absolute -inset-1 bg-gradient-to-r from-indigo-100 to-purple-100 rounded-3xl blur opacity-25 group-focus-within:opacity-75 transition duration-500"></div>
                                     <textarea
                                         value={formData.additional}
                                         onChange={(e) => setFormData({ ...formData, additional: e.target.value })}
                                         rows="4"
-                                        className="w-full px-6 py-5 rounded-3xl border-2 border-slate-100 bg-slate-50 focus:bg-white focus:border-slate-400 focus:ring-0 focus:outline-none transition-all resize-none text-lg text-slate-800 placeholder-slate-400 shadow-inner"
-                                        placeholder="The staff was amazing..."
+                                        className="relative w-full px-6 py-5 rounded-3xl border border-slate-200 bg-white/50 focus:bg-white focus:border-indigo-400 focus:ring-0 focus:outline-none transition-all resize-none text-base text-slate-800 placeholder-slate-400 shadow-sm"
+                                        placeholder="The details make the difference..."
                                     ></textarea>
                                 </div>
                             </motion.div>
 
                             {/* Star Rating & Submit */}
-                            <motion.div variants={itemVariants} className="pt-8 border-t border-gray-100">
-                                <label className="block text-2xl font-black text-center text-slate-800 mb-8">
-                                    Your Final Rating
-                                </label>
-                                <div className="flex justify-center gap-3 mb-12">
-                                    {[1, 2, 3, 4, 5].map((star) => (
-                                        <motion.button
-                                            key={star}
-                                            type="button"
-                                            whileHover={{ scale: 1.2, rotate: 10 }}
-                                            whileTap={{ scale: 0.8 }}
-                                            onClick={() => handleRatingClick(star)}
-                                            className="focus:outline-none relative group"
-                                        >
-                                            <StarIcon
-                                                className={`w-14 h-14 transition-all duration-300 ${star <= formData.rating
-                                                    ? 'text-yellow-400 fill-yellow-400 drop-shadow-md'
-                                                    : 'text-gray-200 fill-gray-200 group-hover:text-yellow-200'
-                                                    }`}
-                                            />
-                                        </motion.button>
-                                    ))}
+                            <motion.div variants={itemVariants} className="pt-8 border-t border-slate-100">
+                                <div className="text-center mb-10">
+                                    <h3 className="text-xs font-bold uppercase tracking-[0.2em] text-slate-400 mb-4">Your Final Rating</h3>
+                                    <div className="flex justify-center gap-3 sm:gap-4" onMouseLeave={() => setHoverRating(0)}>
+                                        {[1, 2, 3, 4, 5].map((star) => (
+                                            <motion.button
+                                                key={star}
+                                                type="button"
+                                                whileHover={{ scale: 1.25, rotate: 10 }}
+                                                whileTap={{ scale: 0.9 }}
+                                                onClick={() => handleRatingClick(star)}
+                                                onMouseEnter={() => setHoverRating(star)}
+                                                className="focus:outline-none relative group p-1"
+                                            >
+                                                <StarIcon
+                                                    className={`w-10 h-10 sm:w-14 sm:h-14 transition-all duration-200 drop-shadow-md ${star <= (hoverRating || formData.rating)
+                                                        ? 'text-yellow-400 scale-110 drop-shadow-lg filter'
+                                                        : 'text-slate-200 group-hover:text-yellow-200'
+                                                        }`}
+                                                />
+                                                {star <= (hoverRating || formData.rating) && (
+                                                    <motion.div
+                                                        className="absolute inset-0 bg-yellow-400/20 blur-xl rounded-full -z-10"
+                                                        initial={{ opacity: 0, scale: 0.5 }}
+                                                        animate={{ opacity: 1, scale: 1 }}
+                                                        exit={{ opacity: 0, scale: 0 }}
+                                                        transition={{ duration: 0.2 }}
+                                                    />
+                                                )}
+                                            </motion.button>
+                                        ))}
+                                    </div>
+                                    <div className="h-6 mt-2">
+                                        <AnimatePresence mode="wait">
+                                            {(hoverRating > 0 || formData.rating > 0) && (
+                                                <motion.div
+                                                    key={hoverRating || formData.rating}
+                                                    initial={{ opacity: 0, y: 10 }}
+                                                    animate={{ opacity: 1, y: 0 }}
+                                                    exit={{ opacity: 0, y: -10 }}
+                                                    className="text-lg font-bold text-slate-800"
+                                                >
+                                                    {(hoverRating || formData.rating) === 5 && "Absolutely loved it! 🌟"}
+                                                    {(hoverRating || formData.rating) === 4 && "Great experience 👍"}
+                                                    {(hoverRating || formData.rating) === 3 && "It was okay"}
+                                                    {(hoverRating || formData.rating) === 2 && "Could be better"}
+                                                    {(hoverRating || formData.rating) === 1 && "Not satisfied"}
+                                                </motion.div>
+                                            )}
+                                        </AnimatePresence>
+                                    </div>
                                 </div>
 
                                 <motion.button
-                                    whileHover={{ scale: 1.02, translateY: -2 }}
+                                    whileHover={{ scale: 1.02 }}
                                     whileTap={{ scale: 0.98 }}
                                     type="submit"
                                     disabled={!formData.rating}
-                                    className="w-full py-6 rounded-2xl bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 text-white text-xl font-bold shadow-2xl shadow-slate-900/30 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-3 relative overflow-hidden group hover:from-black hover:to-slate-900 transition-all"
+                                    className="w-full py-5 rounded-2xl bg-slate-900 text-white text-lg font-bold shadow-2xl shadow-slate-900/20 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-3 relative overflow-hidden group hover:bg-black transition-all"
                                 >
-                                    <span className="relative z-10">Continue</span>
+                                    <span className="relative z-10">Generate Review</span>
                                     <ArrowLeftIcon className="w-5 h-5 rotate-180" />
+                                    <div className="absolute inset-0 bg-white/10 translate-y-full group-hover:translate-y-0 transition-transform duration-300"></div>
                                 </motion.button>
                             </motion.div>
 
                         </form>
-                    </motion.div>
+                    </motion.div >
 
-                </motion.div>
-                <Footer />
-            </main>
-        </div>
+                </motion.div >
+            </main >
+            <Footer />
+        </div >
     );
 }

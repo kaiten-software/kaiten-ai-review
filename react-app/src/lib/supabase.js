@@ -104,6 +104,7 @@ export const getClientById = async (businessId) => {
                     qualities: data.qualities || [],
                     feelings: data.feelings || [],
                     searchKeywords: data.search_keywords || [],
+                    google_business_url: data.google_business_url || null,
                     hero: {
                         main: data.hero_image || 'https://images.unsplash.com/photo-1497366216548-37526070297c?w=800',
                         overlay: 'linear-gradient(rgba(0,0,0,0.3), rgba(0,0,0,0.5))',
@@ -366,6 +367,73 @@ export const getAnalytics = async () => {
         };
     } catch (error) {
         console.error('Error fetching analytics:', error);
+        return { success: false, error: error.message };
+    }
+};
+// ==================== STORAGE ====================
+
+export const uploadImage = async (file, bucket = 'business-images') => {
+    try {
+        const fileExt = file.name.split('.').pop();
+        const fileName = `${Math.random().toString(36).substring(2)}_${Date.now()}.${fileExt}`;
+        const filePath = `${fileName}`;
+
+        // List of buckets to try if the primary one fails
+        const bucketsToTry = [bucket];
+        // Only try fallbacks if we are using the default bucket or a known one
+        if (bucket === 'business-images') {
+            bucketsToTry.push('images', 'public', 'avatars');
+        }
+
+        let lastError = null;
+        let successfulBucket = null;
+
+        for (const currentBucket of bucketsToTry) {
+
+            // 1. Try to upload directly
+            let { data, error } = await supabase.storage
+                .from(currentBucket)
+                .upload(filePath, file);
+
+            // 2. If bucket not found, try to create it (only for the primary requested bucket)
+            if (error && (error.message.includes('not found') || error.statusCode === '404' || error.error === 'Bucket not found')) {
+                if (currentBucket === bucket) {
+                    console.log(`Bucket '${currentBucket}' not found. Attempting to create...`);
+                    const { error: createError } = await supabase.storage.createBucket(currentBucket, { public: true });
+                    if (!createError) {
+                        // Retry upload
+                        const retry = await supabase.storage.from(currentBucket).upload(filePath, file);
+                        if (!retry.error) {
+                            successfulBucket = currentBucket;
+                            break;
+                        }
+                    }
+                }
+                // If failed, continue loop to next fallback
+                lastError = error;
+                continue;
+            }
+
+            if (!error) {
+                successfulBucket = currentBucket;
+                break;
+            }
+
+            lastError = error;
+        }
+
+        if (!successfulBucket) {
+            console.error('All upload attempts failed. Last error:', lastError);
+            throw new Error(`Storage Error: The bucket '${bucket}' is missing. Please create a public bucket named '${bucket}' in Supabase, or run the provided setup SQL script.`);
+        }
+
+        const { data: publicUrlData } = supabase.storage
+            .from(successfulBucket)
+            .getPublicUrl(filePath);
+
+        return { success: true, url: publicUrlData.publicUrl };
+    } catch (error) {
+        console.error('Error uploading image:', error);
         return { success: false, error: error.message };
     }
 };
