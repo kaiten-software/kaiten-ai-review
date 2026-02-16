@@ -1,0 +1,332 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Premium 3D QR Stands - Interactive Demo</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap"
+        rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', system-ui, sans-serif;
+        }
+
+        .preserve-3d {
+            transform-style: preserve-3d;
+        }
+
+        @keyframes pulse-glow {
+
+            0%,
+            100% {
+                opacity: 0.3;
+            }
+
+            50% {
+                opacity: 0.6;
+            }
+        }
+
+        .animate-pulse-glow {
+            animation: pulse-glow 3s ease-in-out infinite;
+        }
+    </style>
+</head>
+
+<body class="bg-slate-900 min-h-screen p-8">
+    <div class="max-w-7xl mx-auto">
+        <div class="text-center mb-12">
+            <h1 class="text-4xl font-black text-white mb-4">Premium 3D QR Stand Designs</h1>
+            <p class="text-slate-400 text-lg">Interactive • Beautiful • Professional</p>
+            <p class="text-yellow-400 text-sm mt-2">🖱️ Drag any stand to rotate 360°</p>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+
+            <!-- Design 1: Luxury Blue -->
+            <div
+                class="bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 rounded-3xl p-12 relative overflow-hidden">
+                <div class="absolute top-20 left-20 w-64 h-64 bg-blue-400/20 rounded-full blur-3xl animate-pulse-glow">
+                </div>
+                <div
+                    class="absolute bottom-20 right-20 w-64 h-64 bg-purple-400/20 rounded-full blur-3xl animate-pulse-glow">
+                </div>
+
+                <div
+                    class="absolute bottom-12 left-1/2 -translate-x-1/2 w-[280px] h-8 bg-black/30 blur-2xl rounded-full">
+                </div>
+
+                <div
+                    class="relative w-[280px] h-[420px] bg-white rounded-2xl shadow-[0_20px_60px_rgba(0,0,0,0.25)] overflow-hidden border-[6px] border-white mx-auto">
+                    <div
+                        class="absolute inset-0 bg-gradient-to-br from-white/40 via-transparent to-white/20 pointer-events-none">
+                    </div>
+
+                    <!-- Top - Business Branding -->
+                    <div
+                        class="relative h-[100px] bg-gradient-to-br from-blue-600 via-blue-700 to-indigo-700 flex flex-col items-center justify-center px-6 py-4">
+                        <div class="text-5xl mb-2 drop-shadow-lg">🍕</div>
+                        <h2 class="text-white font-black text-xl tracking-tight drop-shadow-md">Pizza Corner</h2>
+                        <p class="text-blue-100 text-xs font-semibold tracking-wide mt-1">Premium Experience</p>
+                    </div>
+
+                    <!-- Middle - QR Code -->
+                    <div class="relative bg-gradient-to-b from-white to-slate-50 px-8 py-8 flex flex-col items-center">
+                        <h3 class="text-slate-800 font-black text-lg mb-2 tracking-tight">Share Your Experience</h3>
+                        <p class="text-slate-600 text-sm font-medium mb-6">Scan to leave a review</p>
+
+                        <div class="relative mb-6">
+                            <div
+                                class="absolute -inset-4 bg-gradient-to-r from-blue-500/30 via-purple-500/30 to-blue-500/30 blur-2xl rounded-2xl animate-pulse-glow">
+                            </div>
+                            <div
+                                class="relative bg-white p-4 rounded-2xl shadow-[0_8px_30px_rgba(0,0,0,0.12)] border-4 border-blue-500/20">
+                                <div
+                                    class="w-40 h-40 bg-slate-900 flex items-center justify-center text-white font-bold">
+                                    QR CODE</div>
+                            </div>
+                        </div>
+
+                        <div class="flex items-center gap-3 text-slate-600">
+                            <div class="flex flex-col items-center">
+                                <div class="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center mb-1">
+                                    <span class="text-lg">📱</span>
+                                </div>
+                                <span class="text-[10px] font-semibold">Scan</span>
+                            </div>
+                            <div class="w-6 h-[2px] bg-gradient-to-r from-blue-300 to-purple-300"></div>
+                            <div class="flex flex-col items-center">
+                                <div class="w-10 h-10 rounded-full bg-purple-100 flex items-center justify-center mb-1">
+                                    <span class="text-lg">⭐</span>
+                                </div>
+                                <span class="text-[10px] font-semibold">Rate</span>
+                            </div>
+                            <div class="w-6 h-[2px] bg-gradient-to-r from-purple-300 to-green-300"></div>
+                            <div class="flex flex-col items-center">
+                                <div class="w-10 h-10 rounded-full bg-green-100 flex items-center justify-center mb-1">
+                                    <span class="text-lg">✓</span>
+                                </div>
+                                <span class="text-[10px] font-semibold">Done</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Bottom - Kaiten Branding -->
+                    <div
+                        class="absolute bottom-0 left-0 right-0 h-[80px] bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex flex-col items-center justify-center px-6 py-4">
+                        <div class="flex items-center gap-2 mb-2">
+                            <span class="text-yellow-400 text-xl">✨</span>
+                            <h4 class="text-white font-black text-base tracking-wider">KAITEN</h4>
+                        </div>
+                        <p class="text-slate-300 text-xs font-bold tracking-widest">AI REVIEW</p>
+                        <p class="text-slate-400 text-[9px] font-medium mt-1">Powered by Artificial Intelligence</p>
+                    </div>
+                </div>
+
+                <p class="text-center text-slate-700 font-bold mt-6">Luxury Blue Gradient</p>
+            </div>
+
+            <!-- Design 2: Emerald Green -->
+            <div
+                class="bg-gradient-to-br from-emerald-50 via-green-50 to-teal-50 rounded-3xl p-12 relative overflow-hidden">
+                <div
+                    class="absolute top-20 left-20 w-64 h-64 bg-emerald-400/20 rounded-full blur-3xl animate-pulse-glow">
+                </div>
+                <div
+                    class="absolute bottom-20 right-20 w-64 h-64 bg-teal-400/20 rounded-full blur-3xl animate-pulse-glow">
+                </div>
+
+                <div
+                    class="absolute bottom-12 left-1/2 -translate-x-1/2 w-[280px] h-8 bg-black/30 blur-2xl rounded-full">
+                </div>
+
+                <div
+                    class="relative w-[280px] h-[420px] bg-white rounded-2xl shadow-[0_20px_60px_rgba(0,0,0,0.25)] overflow-hidden border-[6px] border-white mx-auto">
+                    <div
+                        class="absolute inset-0 bg-gradient-to-br from-white/40 via-transparent to-white/20 pointer-events-none">
+                    </div>
+
+                    <div
+                        class="relative h-[100px] bg-gradient-to-br from-emerald-600 via-green-700 to-teal-700 flex flex-col items-center justify-center px-6 py-4">
+                        <div class="text-5xl mb-2 drop-shadow-lg">🍕</div>
+                        <h2 class="text-white font-black text-xl tracking-tight drop-shadow-md">Pizza Corner</h2>
+                        <p class="text-emerald-100 text-xs font-semibold tracking-wide mt-1">Fresh & Sustainable</p>
+                    </div>
+
+                    <div
+                        class="relative bg-gradient-to-b from-white to-emerald-50/30 px-8 py-8 flex flex-col items-center">
+                        <h3 class="text-slate-800 font-black text-lg mb-2 tracking-tight">We Value Your Feedback</h3>
+                        <p class="text-slate-600 text-sm font-medium mb-6">Help us grow together</p>
+
+                        <div class="relative mb-6">
+                            <div
+                                class="absolute -inset-4 bg-gradient-to-r from-emerald-500/30 via-green-500/30 to-teal-500/30 blur-2xl rounded-2xl animate-pulse-glow">
+                            </div>
+                            <div
+                                class="relative bg-white p-4 rounded-2xl shadow-[0_8px_30px_rgba(0,0,0,0.12)] border-4 border-emerald-500/20">
+                                <div
+                                    class="w-40 h-40 bg-slate-900 flex items-center justify-center text-white font-bold">
+                                    QR CODE</div>
+                            </div>
+                        </div>
+
+                        <div class="text-center">
+                            <p class="text-emerald-700 font-bold text-sm mb-1">🌱 Eco-Friendly Reviews</p>
+                            <p class="text-slate-500 text-xs">Takes only 30 seconds</p>
+                        </div>
+                    </div>
+
+                    <div
+                        class="absolute bottom-0 left-0 right-0 h-[80px] bg-gradient-to-br from-slate-900 via-emerald-950 to-slate-900 flex flex-col items-center justify-center px-6 py-4">
+                        <div class="flex items-center gap-2 mb-2">
+                            <span class="text-emerald-400 text-xl">✨</span>
+                            <h4 class="text-white font-black text-base tracking-wider">KAITEN</h4>
+                        </div>
+                        <p class="text-emerald-300 text-xs font-bold tracking-widest">AI REVIEW</p>
+                        <p class="text-emerald-400 text-[9px] font-medium mt-1">Smart Review Platform</p>
+                    </div>
+                </div>
+
+                <p class="text-center text-slate-700 font-bold mt-6">Emerald Green Luxury</p>
+            </div>
+
+            <!-- Design 3: Royal Purple -->
+            <div
+                class="bg-gradient-to-br from-purple-50 via-violet-50 to-fuchsia-50 rounded-3xl p-12 relative overflow-hidden">
+                <div
+                    class="absolute top-20 left-20 w-64 h-64 bg-purple-400/20 rounded-full blur-3xl animate-pulse-glow">
+                </div>
+                <div
+                    class="absolute bottom-20 right-20 w-64 h-64 bg-fuchsia-400/20 rounded-full blur-3xl animate-pulse-glow">
+                </div>
+
+                <div
+                    class="absolute bottom-12 left-1/2 -translate-x-1/2 w-[280px] h-8 bg-black/30 blur-2xl rounded-full">
+                </div>
+
+                <div
+                    class="relative w-[280px] h-[420px] bg-white rounded-2xl shadow-[0_20px_60px_rgba(0,0,0,0.25)] overflow-hidden border-[6px] border-white mx-auto">
+                    <div
+                        class="absolute inset-0 bg-gradient-to-br from-white/40 via-transparent to-white/20 pointer-events-none">
+                    </div>
+
+                    <div
+                        class="relative h-[100px] bg-gradient-to-br from-purple-600 via-violet-700 to-fuchsia-700 flex flex-col items-center justify-center px-6 py-4">
+                        <div class="text-5xl mb-2 drop-shadow-lg">🍕</div>
+                        <h2 class="text-white font-black text-xl tracking-tight drop-shadow-md">Pizza Corner</h2>
+                        <p class="text-purple-100 text-xs font-semibold tracking-wide mt-1">Luxury Experience</p>
+                    </div>
+
+                    <div
+                        class="relative bg-gradient-to-b from-white to-purple-50/30 px-8 py-8 flex flex-col items-center">
+                        <h3 class="text-slate-800 font-black text-lg mb-2 tracking-tight">Rate Your Visit</h3>
+                        <p class="text-slate-600 text-sm font-medium mb-6">Your opinion matters</p>
+
+                        <div class="relative mb-6">
+                            <div
+                                class="absolute -inset-4 bg-gradient-to-r from-purple-500/30 via-violet-500/30 to-fuchsia-500/30 blur-2xl rounded-2xl animate-pulse-glow">
+                            </div>
+                            <div
+                                class="relative bg-white p-4 rounded-2xl shadow-[0_8px_30px_rgba(0,0,0,0.12)] border-4 border-purple-500/20">
+                                <div
+                                    class="w-40 h-40 bg-slate-900 flex items-center justify-center text-white font-bold">
+                                    QR CODE</div>
+                            </div>
+                        </div>
+
+                        <div class="flex items-center gap-2 text-purple-700">
+                            <span class="text-2xl">📱</span>
+                            <span class="font-bold text-sm">Quick Scan Review</span>
+                        </div>
+                    </div>
+
+                    <div
+                        class="absolute bottom-0 left-0 right-0 h-[80px] bg-gradient-to-br from-slate-900 via-purple-950 to-slate-900 flex flex-col items-center justify-center px-6 py-4">
+                        <div class="flex items-center gap-2 mb-2">
+                            <span class="text-purple-400 text-xl">✨</span>
+                            <h4 class="text-white font-black text-base tracking-wider">KAITEN</h4>
+                        </div>
+                        <p class="text-purple-300 text-xs font-bold tracking-widest">AI REVIEW</p>
+                        <p class="text-purple-400 text-[9px] font-medium mt-1">Premium Review Solution</p>
+                    </div>
+                </div>
+
+                <p class="text-center text-slate-700 font-bold mt-6">Royal Purple Premium</p>
+            </div>
+
+            <!-- Design 4: Vibrant Orange -->
+            <div
+                class="bg-gradient-to-br from-orange-50 via-amber-50 to-yellow-50 rounded-3xl p-12 relative overflow-hidden">
+                <div
+                    class="absolute top-20 left-20 w-64 h-64 bg-orange-400/20 rounded-full blur-3xl animate-pulse-glow">
+                </div>
+                <div
+                    class="absolute bottom-20 right-20 w-64 h-64 bg-amber-400/20 rounded-full blur-3xl animate-pulse-glow">
+                </div>
+
+                <div
+                    class="absolute bottom-12 left-1/2 -translate-x-1/2 w-[280px] h-8 bg-black/30 blur-2xl rounded-full">
+                </div>
+
+                <div
+                    class="relative w-[280px] h-[420px] bg-white rounded-2xl shadow-[0_20px_60px_rgba(0,0,0,0.25)] overflow-hidden border-[6px] border-white mx-auto">
+                    <div
+                        class="absolute inset-0 bg-gradient-to-br from-white/40 via-transparent to-white/20 pointer-events-none">
+                    </div>
+
+                    <div
+                        class="relative h-[100px] bg-gradient-to-br from-orange-600 via-amber-700 to-yellow-600 flex flex-col items-center justify-center px-6 py-4">
+                        <div class="text-5xl mb-2 drop-shadow-lg">🍕</div>
+                        <h2 class="text-white font-black text-xl tracking-tight drop-shadow-md">Pizza Corner</h2>
+                        <p class="text-orange-100 text-xs font-semibold tracking-wide mt-1">Energetic & Bold</p>
+                    </div>
+
+                    <div
+                        class="relative bg-gradient-to-b from-white to-orange-50/30 px-8 py-8 flex flex-col items-center">
+                        <h3 class="text-slate-800 font-black text-lg mb-2 tracking-tight">Love Our Service?</h3>
+                        <p class="text-slate-600 text-sm font-medium mb-6">Share your experience!</p>
+
+                        <div class="relative mb-6">
+                            <div
+                                class="absolute -inset-4 bg-gradient-to-r from-orange-500/30 via-amber-500/30 to-yellow-500/30 blur-2xl rounded-2xl animate-pulse-glow">
+                            </div>
+                            <div
+                                class="relative bg-white p-4 rounded-2xl shadow-[0_8px_30px_rgba(0,0,0,0.12)] border-4 border-orange-500/20">
+                                <div
+                                    class="w-40 h-40 bg-slate-900 flex items-center justify-center text-white font-bold">
+                                    QR CODE</div>
+                            </div>
+                        </div>
+
+                        <div class="text-center">
+                            <p class="text-orange-700 font-bold text-sm mb-1">⭐ Rate Us Now</p>
+                            <p class="text-slate-500 text-xs">Quick & Easy</p>
+                        </div>
+                    </div>
+
+                    <div
+                        class="absolute bottom-0 left-0 right-0 h-[80px] bg-gradient-to-br from-slate-900 via-orange-950 to-slate-900 flex flex-col items-center justify-center px-6 py-4">
+                        <div class="flex items-center gap-2 mb-2">
+                            <span class="text-orange-400 text-xl">✨</span>
+                            <h4 class="text-white font-black text-base tracking-wider">KAITEN</h4>
+                        </div>
+                        <p class="text-orange-300 text-xs font-bold tracking-widest">AI REVIEW</p>
+                        <p class="text-orange-400 text-[9px] font-medium mt-1">Next-Gen Reviews</p>
+                    </div>
+                </div>
+
+                <p class="text-center text-slate-700 font-bold mt-6">Vibrant Orange Energy</p>
+            </div>
+
+        </div>
+
+        <div class="mt-12 text-center">
+            <p class="text-slate-400 text-sm">✨ Premium 3D QR Stands with Interactive Rotation</p>
+            <p class="text-slate-500 text-xs mt-2">Dual Branding • Beautiful Aesthetics • Working QR Codes</p>
+        </div>
+    </div>
+</body>
+
+</html>

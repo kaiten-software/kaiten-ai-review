@@ -48,21 +48,7 @@ export default function PrivateFeedback() {
         };
 
         try {
-            // SAVE TO LOCAL STORAGE (Demo Persistence)
-            const demoReview = {
-                id: Date.now(),
-                customer: personalDetails.name,
-                rating: feedbackData.rating,
-                text: feedbackData.additional || 'Customer provided feedback',
-                date: new Date().toISOString().split('T')[0],
-                posted: false,
-                source: "Private Feedback",
-                contact: `${personalDetails.phone}${personalDetails.email ? ' / ' + personalDetails.email : ''}`, // Prioritize phone
-                membership: null,
-                businessId: feedbackData.businessId || 'pizza-corner'
-            };
-            const existing = JSON.parse(localStorage.getItem('demo_reviews') || '[]');
-            localStorage.setItem('demo_reviews', JSON.stringify([demoReview, ...existing]));
+
 
             const result = await addReview(reviewData);
             if (result.success || result) { // Handle mock success if addReview is mocked

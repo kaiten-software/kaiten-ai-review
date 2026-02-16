@@ -175,7 +175,7 @@ export const addReview = async (reviewData) => {
                 feelings: reviewData.feelings || [],
                 service_used: reviewData.service_used,
                 staff_member: reviewData.staff_member,
-                posted_to_google: false,
+                posted_to_google: reviewData.posted_to_google || false,
                 is_public: true,
                 ip_address: reviewData.ip_address || null
             }])
@@ -434,6 +434,111 @@ export const uploadImage = async (file, bucket = 'business-images') => {
         return { success: true, url: publicUrlData.publicUrl };
     } catch (error) {
         console.error('Error uploading image:', error);
+        return { success: false, error: error.message };
+    }
+};
+
+// ==================== QR ORDERS ====================
+
+export const addQROrder = async (orderData) => {
+    try {
+        const { data, error } = await supabase
+            .from('qr_orders')
+            .insert([{
+                business_id: orderData.business_id,
+                business_name: orderData.business_name,
+                plate_number: orderData.plate_number,
+                address: orderData.address,
+                design_info: orderData.design_info || {}, // Add design info
+                status: 'Payment Verified',
+                price: 250
+            }])
+            .select();
+
+        if (error) throw error;
+        return { success: true, data };
+    } catch (error) {
+        console.error('Error adding QR order:', error);
+        return { success: false, error: error.message };
+    }
+};
+
+export const getQROrders = async () => {
+    try {
+        const { data, error } = await supabase
+            .from('qr_orders')
+            .select('*')
+            .order('created_at', { ascending: false });
+
+        if (error) throw error;
+        return { success: true, data };
+    } catch (error) {
+        console.error('Error fetching QR orders:', error);
+        return { success: false, error: error.message };
+    }
+};
+
+export const updateQROrderStatus = async (orderId, status, additionalUpdates = {}) => {
+    try {
+        const { data, error } = await supabase
+            .from('qr_orders')
+            .update({ status, ...additionalUpdates })
+            .eq('id', orderId)
+            .select();
+
+        if (error) throw error;
+        return { success: true, data };
+    } catch (error) {
+        console.error('Error updating QR order status:', error);
+        return { success: false, error: error.message };
+    }
+};
+
+export const deleteQROrder = async (orderId) => {
+    try {
+        const { error } = await supabase
+            .from('qr_orders')
+            .delete()
+            .eq('id', orderId);
+
+        if (error) throw error;
+        return { success: true };
+    } catch (error) {
+        console.error('Error deleting QR order:', error);
+        return { success: false, error: error.message };
+    }
+};
+
+export const getQROrderByBusinessId = async (businessId) => {
+    try {
+        const { data, error } = await supabase
+            .from('qr_orders')
+            .select('*')
+            .eq('business_id', businessId)
+            .order('created_at', { ascending: false })
+            .limit(1)
+            .single();
+
+        if (error && error.code !== 'PGRST116') throw error; // PGRST116 = no rows returned
+        return { success: true, data };
+    } catch (error) {
+        console.error('Error fetching QR order by business ID:', error);
+        return { success: false, error: error.message };
+    }
+};
+
+export const getAllQROrdersByBusinessId = async (businessId) => {
+    try {
+        const { data, error } = await supabase
+            .from('qr_orders')
+            .select('*')
+            .eq('business_id', businessId)
+            .order('created_at', { ascending: false });
+
+        if (error) throw error;
+        return { success: true, data };
+    } catch (error) {
+        console.error('Error fetching all QR orders by business ID:', error);
         return { success: false, error: error.message };
     }
 };

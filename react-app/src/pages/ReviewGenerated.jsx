@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { StarIcon, ClipboardDocumentIcon, ArrowLeftIcon, SparklesIcon, CheckBadgeIcon, ShieldCheckIcon, CheckCircleIcon, GiftIcon } from '@heroicons/react/24/solid';
 import Footer from '../components/common/Footer';
+import { addReview } from '../lib/supabase';
 
 export default function ReviewGenerated() {
     const navigate = useNavigate();
@@ -114,21 +115,28 @@ export default function ReviewGenerated() {
             console.warn('Copy failed', e);
         }
 
-        // SAVE TO LOCAL STORAGE (Demo Persistence)
-        const newReview = {
-            id: Date.now(),
-            customer: reviewData.name || "Happy Customer",
+        // SAVE TO SUPABASE
+        const servicesList = reviewData.services || (reviewData.service ? [reviewData.service] : []);
+
+        const result = await addReview({
+            business_id: reviewData.businessId || 'pizza-corner',
+            business_name: reviewData.businessName || 'Pizza Corner',
+            customer_name: reviewData.name || "Happy Customer",
+            customer_email: reviewData.email || "",
+            customer_phone: "",
             rating: reviewData.rating,
-            text: generatedContent,
-            date: new Date().toISOString().split('T')[0],
-            posted: true,
-            source: "Google",
-            contact: reviewData.email || "",
-            membership: null,
-            businessId: reviewData.businessId || 'pizza-corner'
-        };
-        const existing = JSON.parse(localStorage.getItem('demo_reviews') || '[]');
-        localStorage.setItem('demo_reviews', JSON.stringify([newReview, ...existing]));
+            review_text: generatedContent,
+            qualities: reviewData.qualities || [],
+            feelings: reviewData.feelings || [],
+            service_used: servicesList.join(', '),
+            staff_member: reviewData.staff || "",
+            posted_to_google: true,
+            is_public: true
+        });
+
+        if (result.success && result.data && result.data.length > 0) {
+            sessionStorage.setItem('reviewId', result.data[0].id);
+        }
 
         // Open Google Reviews
         // Prioritize the direct "Write a Review" URL format if a Place ID is available
@@ -144,21 +152,28 @@ export default function ReviewGenerated() {
     const handleSubmitPrivateFeedback = async () => {
         setIsSubmittingFeedback(true);
 
-        // SAVE TO LOCAL STORAGE (Demo Persistence)
-        const newReview = {
-            id: Date.now(),
-            customer: reviewData.name || "Concerned Customer", // Default name
+        // SAVE TO SUPABASE
+        const servicesList = reviewData.services || (reviewData.service ? [reviewData.service] : []);
+
+        const result = await addReview({
+            business_id: reviewData.businessId || 'pizza-corner',
+            business_name: reviewData.businessName || 'Pizza Corner',
+            customer_name: reviewData.name || "Concerned Customer",
+            customer_email: reviewData.email || "",
+            customer_phone: "",
             rating: reviewData.rating,
-            text: generatedContent,
-            date: new Date().toISOString().split('T')[0],
-            posted: false,
-            source: "Direct Feedback",
-            contact: reviewData.email || "",
-            membership: null,
-            businessId: reviewData.businessId || 'pizza-corner'
-        };
-        const existing = JSON.parse(localStorage.getItem('demo_reviews') || '[]');
-        localStorage.setItem('demo_reviews', JSON.stringify([newReview, ...existing]));
+            review_text: generatedContent,
+            qualities: reviewData.qualities || [],
+            feelings: reviewData.feelings || [],
+            service_used: servicesList.join(', '),
+            staff_member: reviewData.staff || "",
+            posted_to_google: false,
+            is_public: false
+        });
+
+        if (result.success && result.data && result.data.length > 0) {
+            sessionStorage.setItem('reviewId', result.data[0].id);
+        }
 
         // Simulate API call
         setTimeout(() => {

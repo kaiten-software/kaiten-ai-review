@@ -1,6 +1,7 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
+import { addQROrder, getQROrderByBusinessId, getAllQROrdersByBusinessId, getReviewsByBusiness, deleteReview as deleteReviewSupabase } from '../lib/supabase';
 import {
     ChartBarIcon,
     QrCodeIcon,
@@ -20,8 +21,10 @@ import {
     CheckCircleIcon,
     TrashIcon,
     ChevronRightIcon,
-    ArrowUpRightIcon,
+    CheckIcon,
+    ExclamationTriangleIcon,
     GlobeAltIcon,
+    ArrowUpRightIcon,
     SparklesIcon,
     CodeBracketIcon,
     ShareIcon,
@@ -33,14 +36,25 @@ import {
     HeartIcon,
     FireIcon,
     Bars3Icon,
-    XMarkIcon
+    XMarkIcon,
+    CubeIcon,
+    CreditCardIcon,
+    TruckIcon,
+    InformationCircleIcon,
+    ChatBubbleLeftRightIcon,
+    CursorArrowRaysIcon,
+    ArrowDownTrayIcon,
+    ShieldCheckIcon,
+    BoltIcon
 } from '@heroicons/react/24/outline';
+import { Premium3DQRStands } from '../components/Premium3DQRStands';
 
 // Mock Data for Multiple Clients
 const MOCK_DB = {
     'pizza-corner': {
         id: 'pizza-corner',
         name: 'Pizza Corner',
+        address: '78 Indiranagar, Bangalore, Karnataka 560038',
         type: 'Restaurant',
         logo: '🍕',
         theme: { from: 'from-orange-600', to: 'to-red-600', bg: 'bg-orange-50', accent: 'text-orange-600' },
@@ -52,6 +66,23 @@ const MOCK_DB = {
             reviewsGenerated: 892,
             googlePosts: 734,
             avgRating: 4.7
+        },
+        shipment: {
+            orderId: 'ORD-7782-KP',
+            status: 'In Transit', // Ordered, Processing, In Transit, Delivered
+            estimatedDelivery: 'Wed, Feb 18',
+            carrier: 'FedEx Express',
+            trackingNumber: '7823 9942 1102',
+            currentLocation: 'Jaipur Distribution Center',
+            timeline: [
+                { status: 'Order Placed', date: 'Feb 14, 2:30 PM', completed: true },
+                { status: 'Order Confirmed', date: 'Feb 14, 2:35 PM', completed: true },
+                { status: 'Processing', date: 'Feb 15, 10:00 AM', completed: true },
+                { status: 'Shipped', date: 'Feb 16, 9:00 AM', completed: true },
+                { status: 'In Transit', date: 'Feb 16, 5:45 PM', completed: true, current: true },
+                { status: 'Out for Delivery', date: 'Expected Feb 18', completed: false },
+                { status: 'Delivered', date: 'Expected Feb 18', completed: false }
+            ]
         },
         reviews: [
             { id: 101, customer: "Sarah Johnson", rating: 5, text: "The pepperoni pizza was absolutely divine! Best in town.", date: "2026-02-11", posted: true, source: "Google", contact: "sarah.j@example.com", membership: "Gold Member" },
@@ -79,6 +110,7 @@ const MOCK_DB = {
     'rajs-salon': {
         id: 'rajs-salon',
         name: "Raj's Salon",
+        address: "45 Fashion Avenue, Style District, NY 10012",
         type: 'Salon',
         logo: '💇',
         theme: { from: 'from-purple-600', to: 'to-pink-600', bg: 'bg-purple-50', accent: 'text-purple-600' },
@@ -120,6 +152,122 @@ export default function ClientDashboard() {
     const [businessData, setBusinessData] = useState(null);
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
     const [qrLoading, setQrLoading] = useState(true);
+    const [plateAddress, setPlateAddress] = useState('');
+    const [plateOrderStatus, setPlateOrderStatus] = useState('idle'); // idle, processing, success
+    const [ordersList, setOrdersList] = useState([]);
+    const [selectedTrackingOrder, setSelectedTrackingOrder] = useState(null);
+
+    // Fetch all orders
+    useEffect(() => {
+        if (businessData?.business_id || businessData?.id) {
+            loadAllOrders();
+        }
+    }, [businessData]);
+
+    const loadAllOrders = async () => {
+        const id = businessData?.business_id || businessData?.id;
+        if (!id) return;
+        const result = await getAllQROrdersByBusinessId(id);
+        if (result.success && result.data) {
+            setOrdersList(result.data);
+        }
+    };
+
+    // Helper to get display data for selected order
+    const trackingInfo = useMemo(() => {
+        if (!selectedTrackingOrder) return null;
+        const order = selectedTrackingOrder;
+
+        // If manual shipment info exists (from Admin)
+        if (order.shipment_info && Object.keys(order.shipment_info).length > 0) {
+            return {
+                ...order.shipment_info,
+                carrier: order.shipment_info.courier || order.shipment_info.carrier || 'Unknown Carrier',
+                status: order.status,
+                orderId: order.id.substring(0, 8).toUpperCase(),
+                design: order.design_info
+            };
+        }
+        // Generate default view from status
+        const isProcessing = ['Processing', 'In Transit', 'Delivered'].includes(order.status);
+        const isInTransit = ['In Transit', 'Delivered'].includes(order.status);
+        const isDelivered = order.status === 'Delivered';
+
+        return {
+            orderId: order.id.substring(0, 8).toUpperCase(),
+            status: order.status,
+            estimatedDelivery: 'Soon',
+            carrier: 'Pending Assignment',
+            trackingNumber: 'Processing',
+            currentLocation: 'Order Center',
+            design: order.design_info,
+            timeline: [
+                { status: 'Order Placed', date: new Date(order.created_at).toLocaleDateString(), completed: true },
+                { status: 'Payment Verified', date: new Date(order.created_at).toLocaleDateString(), completed: true },
+                { status: 'Processing', date: isProcessing ? 'Started' : 'Pending', completed: isProcessing },
+                { status: 'In Transit', date: isInTransit ? 'On the way' : 'Pending', completed: isInTransit, current: order.status === 'In Transit' },
+                { status: 'Delivered', date: isDelivered ? 'Delivered' : 'Pending', completed: isDelivered }
+            ]
+        };
+    }, [selectedTrackingOrder]);
+
+    // NEW: Active Design State for QR Gallery
+    const [activeDesign, setActiveDesign] = useState(0);
+
+    const qrDesigns = [
+        {
+            id: 0,
+            name: "Corporate Blue",
+            style: "Professional & Trustworthy",
+            description: "Classic blue corporate design perfect for professional businesses and service providers.",
+            material: "5mm Clear Acrylic",
+            dimensions: "5\" × 7\" × 0.2\"",
+            color: "bg-blue-600"
+        },
+        {
+            id: 1,
+            name: "Modern Green",
+            style: "Fresh & Eco-Friendly",
+            description: "Vibrant green design ideal for health, wellness, and eco-conscious businesses.",
+            material: "5mm Clear Acrylic",
+            dimensions: "5\" × 7\" × 0.2\"",
+            color: "bg-emerald-600"
+        },
+        {
+            id: 2,
+            name: "Premium Purple",
+            style: "Luxury & Creative",
+            description: "Elegant purple design for upscale venues, salons, and creative businesses.",
+            material: "5mm Clear Acrylic",
+            dimensions: "5\" × 7\" × 0.2\"",
+            color: "bg-purple-600"
+        },
+        {
+            id: 3,
+            name: "Orange Energy",
+            style: "Bold & Energetic",
+            description: "Vibrant orange design perfect for restaurants, cafes, and entertainment venues.",
+            material: "5mm Clear Acrylic",
+            dimensions: "5\" × 7\" × 0.2\"",
+            color: "bg-orange-600"
+        },
+        {
+            id: 4,
+            name: "Cyan Tech",
+            style: "Modern & Tech-Forward",
+            description: "Contemporary cyan design ideal for tech companies and modern service providers.",
+            material: "5mm Clear Acrylic",
+            dimensions: "5\" × 7\" × 0.2\"",
+            color: "bg-cyan-900"
+        },
+    ];
+
+    const plateId = useMemo(() => {
+        if (!businessData) return '';
+        // Deterministic ID for preview based on name length or something simple, or random once per session
+        // New Format: XXX-XXX-XXX
+        return `${Math.floor(100 + Math.random() * 900)}-${Math.floor(100 + Math.random() * 900)}-${Math.floor(100 + Math.random() * 900)}`;
+    }, [businessData]);
 
     useEffect(() => {
         const isLoggedIn = sessionStorage.getItem('clientLoggedIn');
@@ -130,28 +278,74 @@ export default function ClientDashboard() {
             return;
         }
 
-        const originalData = MOCK_DB[clientId] || MOCK_DB['pizza-corner'];
-        let data = { ...originalData };
+        const loadData = async () => {
+            const mockData = MOCK_DB[clientId] || MOCK_DB['pizza-corner'];
+            let data = { ...mockData };
 
-        // Demo Persistence: Load local reviews
-        try {
-            const localReviews = JSON.parse(localStorage.getItem('demo_reviews') || '[]');
-            const myReviews = localReviews.filter(r => r.businessId === clientId);
-
-            if (myReviews.length > 0) {
-                // Combine with Mock data (newest first)
-                data.reviews = [...myReviews, ...data.reviews];
-                // Update stats
-                data.stats = {
-                    ...data.stats,
-                    reviewsGenerated: data.stats.reviewsGenerated + myReviews.length
-                };
+            // Load real client data from Supabase if available
+            try {
+                const { success, data: clientData } = await getClientById(clientId);
+                if (success && clientData) {
+                    console.log("Loaded real client data:", clientData);
+                    // Merge real data over mock data
+                    data = {
+                        ...data,
+                        id: clientData.id,
+                        name: clientData.name,
+                        address: clientData.address, // Sync address
+                        logo: clientData.logo,
+                        status: 'Active', // Default status if not in DB
+                        // Keep other mock fields if they are missing active data (like theme, etc.)
+                        // Add other fields as needed
+                    };
+                }
+            } catch (err) {
+                console.error("Supabase client load error:", err);
             }
-        } catch (err) {
-            console.error("Local storage error:", err);
-        }
 
-        setBusinessData(data);
+            // Load reviews from Supabase
+            try {
+                const { success, data: supabaseReviews } = await getReviewsByBusiness(clientId);
+                if (success && supabaseReviews.length > 0) {
+                    const formattedReviews = supabaseReviews.map(r => ({
+                        id: r.id,
+                        customer: r.customer_name || "Anonymous",
+                        rating: r.rating,
+                        text: r.review_text,
+                        date: new Date(r.created_at).toISOString().split('T')[0],
+                        posted: r.posted_to_google,
+                        source: r.posted_to_google ? "Google" : "Direct",
+                        contact: r.customer_email || r.customer_phone || "",
+                        membership: null,
+                        businessId: r.business_id
+                    }));
+
+                    // Combine Supabase reviews with Mock data (Supabase reviews first)
+                    // Note: In a real app, you might want to replace mock data entirely
+                    data.reviews = [...formattedReviews, ...data.reviews];
+
+                    // Update stats based on Supabase Data + Mock Data
+                    const totalReviews = data.reviews.length;
+                    const totalRating = data.reviews.reduce((sum, r) => sum + r.rating, 0);
+                    const avgRating = totalReviews > 0 ? (totalRating / totalReviews).toFixed(1) : data.stats.avgRating;
+
+                    data.stats = {
+                        ...data.stats,
+                        reviewsGenerated: totalReviews,
+                        avgRating: avgRating
+                    };
+                }
+            } catch (err) {
+                console.error("Supabase load error:", err);
+            }
+
+            setBusinessData(data);
+            if (data.address) {
+                setPlateAddress(data.address);
+            }
+        };
+
+        loadData();
     }, [navigate]);
 
     const handleLogout = () => {
@@ -160,16 +354,17 @@ export default function ClientDashboard() {
         navigate('/login');
     };
 
-    const deleteReview = (id) => {
+    const deleteReview = async (id) => {
         if (window.confirm('Are you sure you want to delete this review?')) {
-            // Updated State
+            // Optimistic Update
             const updatedReviews = businessData.reviews.filter(r => r.id !== id);
             setBusinessData(prev => ({ ...prev, reviews: updatedReviews }));
 
-            // Update Local Storage
-            const storedReviews = JSON.parse(localStorage.getItem('demo_reviews') || '[]');
-            const newStoredReviews = storedReviews.filter(r => r.id !== id);
-            localStorage.setItem('demo_reviews', JSON.stringify(newStoredReviews));
+            // Delete from Supabase
+            // Check if it's a UUID (Supabase ID) vs Number (Mock ID)
+            if (typeof id === 'string' && id.length > 10) {
+                await deleteReviewSupabase(id);
+            }
         }
     };
 
@@ -229,7 +424,10 @@ export default function ClientDashboard() {
                             { id: 'reviews', label: 'Reviews', icon: StarIcon },
                             { id: 'products', label: 'Products', icon: ShoppingBagIcon },
                             { id: 'team', label: 'Team', icon: UserGroupIcon },
+
                             { id: 'qr', label: 'QR Collection', icon: QrCodeIcon },
+                            { id: 'qr-plate', label: 'Order QR Stand', icon: CubeIcon },
+                            { id: 'tracking', label: 'Track Shipment', icon: TruckIcon },
                             { id: 'analytics', label: 'Analytics', icon: ChartPieIcon },
                             { id: 'competitors', label: 'Competitor Spy', icon: EyeIcon },
                             { id: 'profile', label: 'Settings', icon: UserIcon },
@@ -285,9 +483,12 @@ export default function ClientDashboard() {
                                         activeTab === 'reviews' ? 'Review Management' :
                                             activeTab === 'products' ? 'Product Portfolio' :
                                                 activeTab === 'team' ? 'Team Performance' :
-                                                    activeTab === 'qr' ? 'QR Code Assets' :
-                                                        activeTab === 'analytics' ? 'Analytics & Insights' :
-                                                            'Business Settings'}
+                                                    activeTab === 'team' ? 'Team Performance' :
+                                                        activeTab === 'qr' ? 'QR Code Assets' :
+                                                            activeTab === 'qr-plate' ? 'Get Premium QR Stand' :
+                                                                activeTab === 'tracking' ? 'Shipment Tracking' :
+                                                                    activeTab === 'analytics' ? 'Analytics & Insights' :
+                                                                        'Business Settings'}
                                 </h1>
                                 <p className="text-slate-500 mt-1">
                                     {activeTab === 'dashboard' ? `Welcome back to ${businessData.name}.` : 'Manage your business performance.'}
@@ -528,65 +729,76 @@ export default function ClientDashboard() {
                                 exit={{ opacity: 0, y: -10 }}
                                 className="grid md:grid-cols-2 gap-8 items-start"
                             >
-                                {/* Left: Premium QR Card */}
+                                {/* Left: Premium 2D Printable Card Design */}
                                 <div className="bg-white rounded-[2rem] shadow-xl shadow-slate-200/50 border border-slate-100 p-8 md:p-10 flex flex-col items-center relative overflow-hidden group">
-                                    {/* Background decorative glow */}
-                                    <div className={`absolute top-0 right-0 w-64 h-64 bg-gradient-to-br ${theme.from} ${theme.to} opacity-5 blur-[80px] rounded-full pointer-events-none`}></div>
 
-                                    <div className="relative z-10 text-center w-full">
-                                        <h3 className="text-2xl font-bold text-slate-900 mb-2">Review Point</h3>
-                                        <p className="text-slate-500 text-sm mb-8">Scan to leave a 5-star review instantly</p>
+                                    {/* The Printable Card Itself */}
+                                    <div id="printable-qr-card" className={`relative w-full max-w-[320px] min-h-[500px] rounded-3xl overflow-hidden shadow-2xl transition-transform duration-500 hover:scale-[1.02] flex flex-col items-center text-center bg-gradient-to-br ${theme.from} ${theme.to}`}>
 
-                                        {/* QR Container */}
-                                        <div className="relative mx-auto w-72 h-72 bg-white rounded-3xl shadow-[0_8px_30px_rgb(0,0,0,0.08)] border border-slate-100 p-4 flex items-center justify-center mb-8 group-hover:scale-105 transition-transform duration-500">
-                                            {/* Corner Accents */}
-                                            <div className={`absolute top-4 left-4 w-8 h-8 border-t-4 border-l-4 rounded-tl-xl ${theme.accent.replace('text-', 'border-')} opacity-30`}></div>
-                                            <div className={`absolute top-4 right-4 w-8 h-8 border-t-4 border-r-4 rounded-tr-xl ${theme.accent.replace('text-', 'border-')} opacity-30`}></div>
-                                            <div className={`absolute bottom-4 left-4 w-8 h-8 border-b-4 border-l-4 rounded-bl-xl ${theme.accent.replace('text-', 'border-')} opacity-30`}></div>
-                                            <div className={`absolute bottom-4 right-4 w-8 h-8 border-b-4 border-r-4 rounded-br-xl ${theme.accent.replace('text-', 'border-')} opacity-30`}></div>
+                                        {/* Glass Overlay/Shine */}
+                                        <div className="absolute inset-0 bg-white/10 backdrop-blur-[1px]"></div>
+                                        <div className="absolute -top-24 -left-24 w-48 h-48 bg-white/20 rounded-full blur-3xl"></div>
+                                        <div className="absolute -bottom-24 -right-24 w-48 h-48 bg-black/10 rounded-full blur-3xl"></div>
 
-                                            {/* Loading Skeleton */}
-                                            {qrLoading && (
-                                                <div className="absolute inset-0 m-4 bg-slate-100 animate-pulse rounded-2xl flex items-center justify-center">
-                                                    <QrCodeIcon className="w-12 h-12 text-slate-300 animate-bounce" />
+                                        {/* Content Container */}
+                                        <div className="relative z-10 flex flex-col items-center justify-between gap-6 w-full p-8">
+
+                                            {/* Header */}
+                                            <div className="flex flex-col items-center gap-2 pt-2">
+                                                <div className="w-12 h-12 bg-white/20 backdrop-blur-md rounded-xl flex items-center justify-center text-2xl shadow-sm border border-white/30">
+                                                    {businessData.logo}
                                                 </div>
-                                            )}
+                                                <h3 className="text-white font-bold text-xl tracking-tight leading-tight drop-shadow-md">
+                                                    {businessData.name}
+                                                </h3>
+                                                <div className="flex gap-1">
+                                                    {[1, 2, 3, 4, 5].map(i => (
+                                                        <StarIcon key={i} className="w-4 h-4 text-yellow-400 drop-shadow-sm" />
+                                                    ))}
+                                                </div>
+                                            </div>
 
-                                            {/* Main QR Image */}
-                                            <img
-                                                src={qrCodeUrl}
-                                                alt={`${businessData.name} QR Code`}
-                                                className={`w-full h-full object-contain mix-blend-multiply transition-opacity duration-500 ${qrLoading ? 'opacity-0' : 'opacity-100'}`}
-                                                onLoad={() => setQrLoading(false)}
-                                            />
+                                            {/* QR Code Frame */}
+                                            <div className="bg-white p-4 rounded-2xl shadow-xl w-48 h-48 flex items-center justify-center transform group-hover:scale-105 transition-transform duration-300">
+                                                <img
+                                                    src={qrCodeUrl}
+                                                    alt="Scan to Review"
+                                                    className="w-full h-full object-contain mix-blend-multiply"
+                                                />
+                                            </div>
 
-                                            {/* 'Scan Me' Badge */}
-                                            <div className={`absolute -bottom-4 left-1/2 -translate-x-1/2 px-4 py-1.5 bg-slate-900 text-white text-xs font-bold rounded-full shadow-lg flex items-center gap-1.5 whitespace-nowrap opacity-0 group-hover:opacity-100 transition-all duration-300 translate-y-2 group-hover:translate-y-0`}>
-                                                <PhotoIcon className="w-3 h-3" />
-                                                Scan Me
+                                            {/* Footer CTA */}
+                                            <div className="pb-4">
+                                                <p className="text-white/90 font-medium text-sm uppercase tracking-widest mb-1">Scan to Review</p>
+                                                <div className="px-4 py-2 bg-white/20 backdrop-blur-md rounded-full border border-white/40 shadow-sm">
+                                                    <p className="text-white text-xs font-bold flex items-center gap-2">
+                                                        <span className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></span>
+                                                        Takes 30 seconds
+                                                    </p>
+                                                </div>
                                             </div>
                                         </div>
+                                    </div>
 
-                                        {/* Action Buttons */}
-                                        <div className="flex flex-col sm:flex-row gap-3 w-full max-w-sm mx-auto">
-                                            <button
-                                                onClick={() => window.open(qrCodeUrl, '_blank')}
-                                                className={`flex-1 px-6 py-3.5 rounded-xl text-white font-bold shadow-lg shadow-blue-500/20 flex items-center justify-center gap-2 bg-gradient-to-r ${theme.from} ${theme.to} hover:brightness-110 active:scale-95 transition-all`}
-                                            >
-                                                <ArrowRightOnRectangleIcon className="w-5 h-5" />
-                                                Download PNG
-                                            </button>
-                                            <button
-                                                onClick={() => {
-                                                    navigator.clipboard.writeText(publicPageUrl);
-                                                    alert('Link copied to clipboard!');
-                                                }}
-                                                className="px-6 py-3.5 rounded-xl bg-slate-50 text-slate-700 font-bold border border-slate-200 hover:bg-slate-100 hover:border-slate-300 active:scale-95 transition-all flex items-center justify-center"
-                                                title="Copy Link"
-                                            >
-                                                <LinkIcon className="w-5 h-5" />
-                                            </button>
-                                        </div>
+                                    {/* Action Buttons */}
+                                    <div className="flex flex-col sm:flex-row gap-3 w-full max-w-sm mx-auto mt-8">
+                                        <button
+                                            onClick={() => window.open(qrCodeUrl, '_blank')}
+                                            className="flex-1 px-6 py-3.5 rounded-xl bg-slate-900 text-white font-bold shadow-lg shadow-slate-900/20 hover:bg-slate-800 active:scale-95 transition-all flex items-center justify-center gap-2"
+                                        >
+                                            <ArrowDownTrayIcon className="w-5 h-5" />
+                                            Download PNG
+                                        </button>
+                                        <button
+                                            onClick={() => {
+                                                navigator.clipboard.writeText(publicPageUrl);
+                                                alert('Link copied to clipboard!');
+                                            }}
+                                            className="px-6 py-3.5 rounded-xl bg-white text-slate-700 font-bold border border-slate-200 hover:bg-slate-50 hover:border-slate-300 active:scale-95 transition-all flex items-center justify-center"
+                                            title="Copy Link"
+                                        >
+                                            <LinkIcon className="w-5 h-5" />
+                                        </button>
                                     </div>
                                 </div>
 
@@ -634,6 +846,251 @@ export default function ClientDashboard() {
                                                 </p>
                                             </div>
                                         </div>
+                                    </div>
+                                </div>
+                            </motion.div>
+                        )}
+
+
+
+                        {/* --- ANALYTICS TAB --- */}
+
+                        {/* --- QR PLATE ORDER TAB --- */}
+                        {activeTab === 'qr-plate' && (
+                            <motion.div
+                                key="qr-plate"
+                                initial={{ opacity: 0, y: 10 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                exit={{ opacity: 0, y: -10 }}
+                                className="grid lg:grid-cols-2 gap-12 items-start"
+                            >
+                                {/* Left: The "AI" generated Plate Preview - REDESIGNED */}
+                                <div className="space-y-6">
+                                    {/* Clean Preview Container - NO OVERLAP */}
+                                    <div className="bg-white p-8 rounded-3xl border-2 border-slate-200 shadow-lg">
+
+                                        {/* QR Stand Preview - CRISP & CLEAR */}
+                                        <div className="relative w-full h-[600px] flex items-center justify-center bg-gradient-to-br from-slate-50 to-slate-100 rounded-2xl overflow-hidden">
+                                            {/* Premium 3D QR Stand - HD CRISP */}
+                                            <Premium3DQRStands
+                                                activeDesign={activeDesign}
+                                                qrCodeUrl={qrCodeUrl}
+                                                businessData={businessData}
+                                            />
+                                        </div>
+
+                                        {/* Color Selector - BELOW STAND (NO OVERLAP) */}
+                                        <div className="mt-6">
+                                            <h3 className="text-sm font-bold text-slate-900 mb-3 flex items-center gap-2">
+                                                <SparklesIcon className="w-4 h-4 text-yellow-500" />
+                                                Choose Your Design
+                                            </h3>
+                                            <div className="grid grid-cols-5 gap-3">
+                                                {qrDesigns.map((design, idx) => {
+                                                    // Get the active class based on design index
+                                                    const activeClasses = [
+                                                        'bg-blue-600',      // Corporate Blue
+                                                        'bg-emerald-600',   // Modern Green
+                                                        'bg-purple-600',    // Premium Purple
+                                                        'bg-orange-600',    // Orange Energy
+                                                        'bg-cyan-900'       // Cyan Tech
+                                                    ];
+
+                                                    return (
+                                                        <button
+                                                            key={design.id}
+                                                            onClick={() => setActiveDesign(idx)}
+                                                            className={`relative p-3 rounded-xl text-center transition-all duration-300 border-2 ${activeDesign === idx
+                                                                ? `${activeClasses[idx]} text-white border-transparent shadow-xl scale-105`
+                                                                : 'bg-white text-slate-700 border-slate-200 hover:border-slate-300 hover:shadow-md'
+                                                                }`}
+                                                        >
+                                                            <div className="text-[10px] font-bold uppercase tracking-wide leading-tight break-words">
+                                                                {design.name}
+                                                            </div>
+                                                            {activeDesign === idx && (
+                                                                <div className="absolute -top-1 -right-1 w-5 h-5 bg-white rounded-full flex items-center justify-center shadow-md">
+                                                                    <svg className="w-3 h-3 text-green-600" fill="currentColor" viewBox="0 0 20 20">
+                                                                        <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                                                                    </svg>
+                                                                </div>
+                                                            )}
+                                                        </button>
+                                                    );
+                                                })}
+                                            </div>
+                                        </div>
+
+                                        {/* Design Details - CLEAN */}
+                                        <div className="mt-6 bg-gradient-to-r from-blue-50 to-indigo-50 p-5 rounded-2xl border border-blue-100">
+                                            <div className="flex items-start gap-4">
+                                                <div className="p-2.5 bg-white rounded-xl shadow-sm">
+                                                    <SparklesIcon className="w-5 h-5 text-blue-600" />
+                                                </div>
+                                                <div className="flex-1">
+                                                    <h4 className="font-black text-slate-900 text-base mb-1">
+                                                        {qrDesigns[activeDesign] ? qrDesigns[activeDesign].name : "Select a design"}
+                                                    </h4>
+                                                    <p className="text-slate-600 text-sm leading-relaxed mb-3">
+                                                        {qrDesigns[activeDesign] ? qrDesigns[activeDesign].description : ""}
+                                                    </p>
+                                                    <div className="flex items-center gap-4 text-xs text-slate-500">
+                                                        <div className="flex items-center gap-1.5 bg-white px-3 py-1.5 rounded-lg">
+                                                            <CubeIcon className="w-3.5 h-3.5" />
+                                                            <span className="font-semibold">{qrDesigns[activeDesign] ? qrDesigns[activeDesign].material : ""}</span>
+                                                        </div>
+                                                        <div className="flex items-center gap-1.5 bg-white px-3 py-1.5 rounded-lg">
+                                                            <span className="font-mono font-semibold">{qrDesigns[activeDesign] ? qrDesigns[activeDesign].dimensions : ""}</span>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm flex items-start gap-4">
+                                        <div className="p-3 bg-blue-50 text-blue-600 rounded-xl">
+                                            <InformationCircleIcon className="w-6 h-6" />
+                                        </div>
+                                        <div>
+                                            <h4 className="font-bold text-slate-900">Why order this?</h4>
+                                            <p className="text-slate-500 text-sm mt-1">Physical QR stands increase review collection by <span className="text-slate-900 font-bold">300%</span>. Placing this on your counter prompts happy customers to leave feedback instantly.</p>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Right: Order Form */}
+                                <div className="space-y-8">
+                                    <div className="bg-white rounded-3xl border border-slate-200 p-8 shadow-xl">
+                                        <h2 className="text-2xl font-bold text-slate-900 flex items-center gap-3 mb-2">
+                                            <CubeIcon className="w-8 h-8 text-blue-600" />
+                                            Order Your Stand
+                                        </h2>
+                                        <p className="text-slate-500 mb-8">Get this premium acrylic QR stand delivered to your doorstep.</p>
+
+                                        {plateOrderStatus === 'success' ? (
+                                            <div className="text-center py-12">
+                                                <div className="w-20 h-20 bg-green-100 text-green-600 rounded-full flex items-center justify-center mx-auto mb-6">
+                                                    <CheckCircleIcon className="w-10 h-10" />
+                                                </div>
+                                                <h3 className="text-2xl font-bold text-slate-900 mb-2">Order Placed Successfully!</h3>
+                                                <p className="text-slate-500 mb-8 max-w-xs mx-auto">Your QR Stand is being prepared. You can track its status in your dashboard.</p>
+                                                <button
+                                                    onClick={() => setPlateOrderStatus('idle')}
+                                                    className="px-6 py-2 text-slate-600 hover:text-slate-900 font-bold"
+                                                >
+                                                    Order Another
+                                                </button>
+                                            </div>
+                                        ) : (
+                                            <div className="space-y-6">
+                                                {/* Store Address (Read-only) */}
+                                                <div>
+                                                    <label className="block text-sm font-bold text-slate-700 mb-2">Store Address</label>
+                                                    <div className="bg-slate-100 p-3 rounded-xl border border-slate-200 text-slate-500 text-sm">
+                                                        {businessData.address || "No store address registered."}
+                                                    </div>
+                                                </div>
+
+                                                {/* Shipping Address */}
+                                                <div>
+                                                    <div className="flex justify-between items-center mb-2">
+                                                        <label className="block text-sm font-bold text-slate-700">Shipping Address</label>
+                                                        {businessData.address && (
+                                                            <label className="flex items-center gap-2 cursor-pointer group">
+                                                                <input
+                                                                    type="checkbox"
+                                                                    className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500 transition-all"
+                                                                    onChange={(e) => {
+                                                                        if (e.target.checked) {
+                                                                            setPlateAddress(businessData.address);
+                                                                        } else {
+                                                                            setPlateAddress('');
+                                                                        }
+                                                                    }}
+                                                                />
+                                                                <span className="text-xs font-semibold text-blue-600 group-hover:text-blue-800 transition-colors">Same as Store Address</span>
+                                                            </label>
+                                                        )}
+                                                    </div>
+                                                    <textarea
+                                                        value={plateAddress}
+                                                        onChange={(e) => setPlateAddress(e.target.value)}
+                                                        placeholder="Enter delivery address..."
+                                                        rows={3}
+                                                        className="w-full px-4 py-3 rounded-xl bg-white border-2 border-slate-200 focus:border-blue-500 focus:outline-none transition-all shadow-sm focus:shadow-md"
+                                                    />
+                                                </div>
+
+                                                <div className="bg-slate-50 rounded-xl p-4 border border-slate-200">
+                                                    <div className="flex justify-between items-center mb-2">
+                                                        <span className="text-slate-600">Premium Acrylic Stand</span>
+                                                        <span className="font-bold text-slate-900">₹250.00</span>
+                                                    </div>
+                                                    <div className="flex justify-between items-center text-sm">
+                                                        <span className="text-slate-500">Delivery Fee</span>
+                                                        <span className="font-bold text-green-600">FREE</span>
+                                                    </div>
+                                                    <div className="border-t border-slate-200 my-3"></div>
+                                                    <div className="flex justify-between items-center text-lg">
+                                                        <span className="font-bold text-slate-900">Total</span>
+                                                        <span className="font-bold text-blue-600">₹250.00</span>
+                                                    </div>
+                                                </div>
+
+                                                <button
+                                                    onClick={async () => {
+                                                        if (!plateAddress) {
+                                                            alert('Please enter a delivery address');
+                                                            return;
+                                                        }
+                                                        setPlateOrderStatus('processing');
+
+                                                        // Call Supabase
+                                                        const result = await addQROrder({
+                                                            business_id: businessData.id,
+                                                            business_name: businessData.name,
+                                                            plate_number: `${Math.floor(100 + Math.random() * 900)}-${Math.floor(100 + Math.random() * 900)}-${Math.floor(100 + Math.random() * 900)}`,
+                                                            address: plateAddress,
+                                                            design_info: {
+                                                                name: qrDesigns[activeDesign].name,
+                                                                colorCode: qrDesigns[activeDesign].color,
+                                                                details: qrDesigns[activeDesign].description
+                                                            }
+                                                        });
+
+                                                        if (result.success) {
+                                                            loadAllOrders(); // Reload to show tracking
+                                                            setTimeout(() => {
+                                                                setPlateOrderStatus('success');
+                                                            }, 1500);
+                                                        } else {
+                                                            alert('Order failed: ' + result.error);
+                                                            setPlateOrderStatus('idle');
+                                                        }
+                                                    }}
+                                                    disabled={plateOrderStatus === 'processing'}
+                                                    className="w-full py-4 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-xl font-bold shadow-lg shadow-blue-500/30 hover:shadow-blue-500/50 hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center justify-center gap-3 disabled:opacity-70 disabled:cursor-not-allowed"
+                                                >
+                                                    {plateOrderStatus === 'processing' ? (
+                                                        <>
+                                                            <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                                                            Processing...
+                                                        </>
+                                                    ) : (
+                                                        <>
+                                                            <CreditCardIcon className="w-6 h-6" />
+                                                            Pay ₹250 & Order Now
+                                                        </>
+                                                    )}
+                                                </button>
+
+                                                <p className="text-center text-xs text-slate-400 flex items-center justify-center gap-1">
+                                                    <TruckIcon className="w-3 h-3" />
+                                                    Estimated delivery: 3-5 business days
+                                                </p>
+                                            </div>
+                                        )}
                                     </div>
                                 </div>
                             </motion.div>
@@ -949,6 +1406,204 @@ export default function ClientDashboard() {
                             </motion.div>
                         )}
 
+                        {/* --- TRACKING TAB --- */}
+                        {activeTab === 'tracking' && (
+                            <motion.div
+                                key="tracking"
+                                initial={{ opacity: 0, y: 10 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                exit={{ opacity: 0, y: -10 }}
+                                className="space-y-8"
+                            >
+                                {!selectedTrackingOrder ? (
+                                    <div className="bg-white rounded-3xl p-8 border border-slate-200 shadow-xl">
+                                        <h2 className="text-2xl font-bold mb-6 text-slate-900">Your QR Stand Orders</h2>
+                                        {ordersList.length === 0 ? (
+                                            <div className="text-center py-12 text-slate-500 bg-slate-50 rounded-2xl border border-slate-100 border-dashed">
+                                                <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                                                    <TruckIcon className="w-8 h-8 text-slate-400" />
+                                                </div>
+                                                <p className="font-bold">No orders placed yet.</p>
+                                                <p className="text-sm mt-1 mb-4">You haven't ordered any QR stands.</p>
+                                                <button onClick={() => setActiveTab('order')} className="px-5 py-2.5 bg-blue-600 text-white rounded-xl font-bold shadow-lg shadow-blue-200 hover:bg-blue-700 transition-colors">
+                                                    Order Now
+                                                </button>
+                                            </div>
+                                        ) : (
+                                            <div className="overflow-x-auto">
+                                                <table className="w-full text-left border-collapse">
+                                                    <thead>
+                                                        <tr className="border-b border-slate-100">
+                                                            <th className="p-4 font-bold text-slate-500 text-xs uppercase tracking-wider">Order ID</th>
+                                                            <th className="p-4 font-bold text-slate-500 text-xs uppercase tracking-wider">Date</th>
+                                                            <th className="p-4 font-bold text-slate-500 text-xs uppercase tracking-wider">Design</th>
+                                                            <th className="p-4 font-bold text-slate-500 text-xs uppercase tracking-wider">Status</th>
+                                                            <th className="p-4 font-bold text-slate-500 text-xs uppercase tracking-wider text-right">Action</th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody className="divide-y divide-slate-50">
+                                                        {ordersList.map(order => (
+                                                            <tr key={order.id} className="hover:bg-slate-50/80 transition-colors group">
+                                                                <td className="p-4 font-mono text-sm font-bold text-slate-700">#{order.id.substring(0, 8).toUpperCase()}</td>
+                                                                <td className="p-4 text-sm text-slate-600">{new Date(order.created_at).toLocaleDateString()}</td>
+                                                                <td className="p-4">
+                                                                    {order.design_info ? (
+                                                                        <div className="flex items-center gap-3">
+                                                                            <div className="w-8 h-8 rounded-lg shadow-sm border border-slate-100 flex items-center justify-center shrink-0" style={{ backgroundColor: order.design_info.colorCode || '#ddd' }}></div>
+                                                                            <div>
+                                                                                <p className="text-sm font-bold text-slate-800">{order.design_info.name}</p>
+                                                                                <p className="text-xs text-slate-400">{order.design_info.material || 'Stand'}</p>
+                                                                            </div>
+                                                                        </div>
+                                                                    ) : <span className="text-sm text-slate-400 italic">Standard Design</span>}
+                                                                </td>
+                                                                <td className="p-4">
+                                                                    <span className={`px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider inline-flex items-center gap-1.5 ${order.status === 'Delivered' ? 'bg-green-100 text-green-700' :
+                                                                        order.status === 'In Transit' ? 'bg-blue-100 text-blue-700' :
+                                                                            'bg-yellow-100 text-yellow-700'
+                                                                        }`}>
+                                                                        <span className={`w-1.5 h-1.5 rounded-full ${order.status === 'Delivered' ? 'bg-green-500' :
+                                                                            order.status === 'In Transit' ? 'bg-blue-500 animate-pulse' :
+                                                                                'bg-yellow-500'
+                                                                            }`}></span>
+                                                                        {order.status}
+                                                                    </span>
+                                                                </td>
+                                                                <td className="p-4 text-right">
+                                                                    <button
+                                                                        onClick={() => setSelectedTrackingOrder(order)}
+                                                                        className="px-4 py-2 bg-white text-blue-600 text-sm font-bold rounded-lg border border-blue-100 hover:bg-blue-50 hover:border-blue-200 transition-colors shadow-sm"
+                                                                    >
+                                                                        Track Shipment
+                                                                    </button>
+                                                                </td>
+                                                            </tr>
+                                                        ))}
+                                                    </tbody>
+                                                </table>
+                                            </div>
+                                        )}
+                                    </div>
+                                ) : (
+                                    <>
+                                        <button
+                                            onClick={() => setSelectedTrackingOrder(null)}
+                                            className="flex items-center gap-2 text-slate-500 hover:text-slate-900 font-bold transition-colors mb-6 group pl-1"
+                                        >
+                                            <span className="group-hover:-translate-x-1 transition-transform">←</span>
+                                            Back to Your Orders
+                                        </button>
+
+                                        {trackingInfo && (
+                                            <div className="space-y-6">
+                                                {/* Active Shipment Card */}
+                                                <div className="bg-white rounded-3xl p-8 border border-slate-200 shadow-xl overflow-hidden relative">
+                                                    <div className="absolute top-0 right-0 p-32 bg-blue-500/5 rounded-full blur-3xl -mr-16 -mt-16 pointer-events-none"></div>
+
+                                                    <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 mb-8 relative z-10">
+                                                        <div>
+                                                            <div className="flex items-center gap-3 mb-2">
+                                                                <span className={`px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider flex items-center gap-2 ${trackingInfo.status === 'Delivered' ? 'bg-green-100 text-green-700' : 'bg-blue-100 text-blue-700'}`}>
+                                                                    <span className={`w-2 h-2 rounded-full animate-pulse ${trackingInfo.status === 'Delivered' ? 'bg-green-600' : 'bg-blue-600'}`}></span>
+                                                                    {trackingInfo.status}
+                                                                </span>
+                                                                <span className="text-slate-400 text-sm font-mono">#{trackingInfo.orderId}</span>
+                                                            </div>
+                                                            <h2 className="text-3xl font-bold text-slate-900">
+                                                                {trackingInfo.status === 'Delivered' ? 'Delivered' : `Arriving by ${trackingInfo.estimatedDelivery}`}
+                                                            </h2>
+                                                            <p className="text-slate-500 mt-1">
+                                                                {trackingInfo.status === 'Delivered' ? 'Your package has arrived.' : 'Your premium QR stand is on its way.'}
+                                                            </p>
+                                                        </div>
+                                                        <div className="text-right">
+                                                            <p className="text-sm text-slate-400 font-bold uppercase tracking-wider">Carrier</p>
+                                                            <p className="text-xl font-bold text-slate-900">{trackingInfo.carrier}</p>
+                                                            <p className="text-sm text-slate-500 font-mono tracking-wide">Tracking #: {trackingInfo.trackingNumber}</p>
+                                                        </div>
+                                                    </div>
+
+                                                    {/* Visual Progress Bar */}
+                                                    <div className="relative mb-12 px-4">
+                                                        <div className="absolute top-1/2 left-0 w-full h-1 bg-slate-100 -translate-y-1/2 rounded-full"></div>
+                                                        <div
+                                                            className="absolute top-1/2 left-0 h-1 bg-blue-600 -translate-y-1/2 rounded-full transition-all duration-1000"
+                                                            style={{
+                                                                width: trackingInfo.status === 'Delivered' ? '100%' :
+                                                                    trackingInfo.status === 'In Transit' ? '65%' :
+                                                                        trackingInfo.status === 'Processing' ? '35%' : '10%'
+                                                            }}
+                                                        ></div>
+
+                                                        {/* Truck Animation - Position Dynamic */}
+                                                        <div
+                                                            className="absolute top-1/2 -mt-7 transition-all duration-1000 z-10"
+                                                            style={{
+                                                                left: trackingInfo.status === 'Delivered' ? '100%' :
+                                                                    trackingInfo.status === 'In Transit' ? '65%' :
+                                                                        trackingInfo.status === 'Processing' ? '35%' : '10%',
+                                                                transform: 'translateX(-50%)'
+                                                            }}
+                                                        >
+                                                            <div className="bg-white p-2 rounded-full shadow-lg border-2 border-blue-600 relative group">
+                                                                <TruckIcon className="w-6 h-6 text-blue-600" />
+                                                                {/* Label - MOVED UP to avoid overlap */}
+                                                                <div className="absolute -top-10 left-1/2 -translate-x-1/2 whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity bg-slate-800 text-white text-xs px-2 py-1 rounded shadow-lg pointer-events-none">
+                                                                    Current Location
+                                                                    <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-2 h-2 bg-slate-800 rotate-45"></div>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+
+                                                        <div className="flex justify-between relative z-0">
+                                                            {['Ordered', 'Processing', 'In Transit', 'Delivered'].map((step, i) => {
+                                                                const statusIdx = trackingInfo.status === 'Delivered' ? 3 :
+                                                                    trackingInfo.status === 'In Transit' ? 2 :
+                                                                        trackingInfo.status === 'Processing' ? 1 : 0;
+                                                                const isActive = i <= statusIdx;
+
+                                                                return (
+                                                                    <div key={i} className="flex flex-col items-center gap-2 pt-4">
+                                                                        <div className={`w-4 h-4 rounded-full border-2 z-10 bg-white ${isActive ? 'border-blue-600 bg-blue-600' : 'border-slate-300'}`}></div>
+                                                                        <span className={`text-xs font-bold ${isActive ? 'text-slate-900' : 'text-slate-400'}`}>{step}</span>
+                                                                    </div>
+                                                                );
+                                                            })}
+                                                        </div>
+                                                    </div>
+                                                </div>
+
+                                                {/* Detailed Timeline */}
+                                                <div className="bg-slate-50 rounded-2xl p-6 border border-slate-100">
+                                                    <h3 className="text-sm font-bold text-slate-900 uppercase tracking-wider mb-6">Shipment Updates</h3>
+                                                    <div className="space-y-6 relative">
+                                                        <div className="absolute top-2 left-[19px] w-0.5 h-full bg-slate-200"></div>
+                                                        {trackingInfo.timeline && trackingInfo.timeline.map((event, idx) => (
+                                                            <div key={idx} className="relative flex gap-6">
+                                                                <div className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 z-10 border-4 border-slate-50 ${event.completed ? 'bg-blue-600 text-white shadow-lg shadow-blue-200' : 'bg-slate-200 text-slate-400'}`}>
+                                                                    {event.completed ? <CheckIcon className="w-5 h-5" /> : <div className="w-3 h-3 bg-slate-300 rounded-full"></div>}
+                                                                </div>
+                                                                <div className={`${event.current ? 'opacity-100' : event.completed ? 'opacity-70' : 'opacity-40'}`}>
+                                                                    <h4 className="text-base font-bold text-slate-900">{event.status}</h4>
+                                                                    <p className="text-sm text-slate-500">{event.date}</p>
+                                                                    {event.current && trackingInfo.currentLocation && (
+                                                                        <p className="text-xs font-bold text-blue-600 mt-1 flex items-center gap-1">
+                                                                            <MapPinIcon className="w-3 h-3" />
+                                                                            {trackingInfo.currentLocation}
+                                                                        </p>
+                                                                    )}
+                                                                </div>
+                                                            </div>
+                                                        ))}
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        )}
+                                    </>
+                                )}
+                            </motion.div>
+                        )}
+
                         {/* --- COMPETITOR SPY TAB --- */}
                         {activeTab === 'competitors' && (
                             <motion.div
@@ -1192,7 +1847,20 @@ export default function ClientDashboard() {
                             </motion.div>
                         )}
                     </AnimatePresence>
-                </div>
+
+                    <style>{`
+                        .custom-curve-bottom {
+                            border-bottom-left-radius: 50% 20px;
+                            border-bottom-right-radius: 50% 20px;
+                        }
+                        .preserve-3d {
+                            transform-style: preserve-3d;
+                        }
+                        .perspective-1000 {
+                            perspective: 1000px;
+                        }
+                    `}</style>
+                </div >
             </main >
         </div >
     );

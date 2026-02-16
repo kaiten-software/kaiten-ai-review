@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>QR Stand - FITS IN 600px CONTAINER</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800;900&family=Inter:wght@400;500;600;700;800;900&display=swap"
+        rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', system-ui, sans-serif;
+        }
+    </style>
+</head>
+
+<body class="bg-slate-900 min-h-screen p-8">
+    <div class="max-w-6xl mx-auto">
+        <div class="text-center mb-8">
+            <h1 class="text-4xl font-black text-white mb-3">✅ FITS PERFECTLY IN CONTAINER</h1>
+            <p class="text-green-400 text-lg font-bold">Container: 600px height | Stand: 520px max height</p>
+            <p class="text-yellow-400 text-sm mt-2">NO OVERFLOW - Professional sizing</p>
+        </div>
+
+        <!-- EXACT CONTAINER FROM DASHBOARD -->
+        <div class="bg-white rounded-2xl p-8 shadow-2xl">
+            <div class="border-4 border-red-500 rounded-xl overflow-hidden">
+                <p class="bg-red-500 text-white text-center py-2 font-bold text-sm">
+                    ⬇️ CONTAINER: 600px HEIGHT (Red Border) ⬇️
+                </p>
+
+                <!-- THIS IS THE EXACT CONTAINER SIZE FROM YOUR DASHBOARD -->
+                <div
+                    class="relative w-full h-[600px] bg-gradient-to-br from-blue-50 to-indigo-50 flex items-center justify-center">
+
+                    <!-- Desk Shadow -->
+                    <div
+                        class="absolute bottom-8 left-1/2 -translate-x-1/2 w-[280px] h-8 bg-blue-500/30 rounded-full blur-2xl">
+                    </div>
+
+                    <!-- Stand - FITS INSIDE -->
+                    <div class="relative"
+                        style="transform: perspective(1000px) rotateX(-3deg) rotateY(1deg); filter: drop-shadow(0 15px 30px rgba(0,0,0,0.2));">
+
+                        <!-- Main Stand Card -->
+                        <div class="relative w-[260px] bg-white rounded-3xl overflow-hidden border-[6px] border-white"
+                            style="box-shadow: 0 15px 40px rgba(0,0,0,0.15); max-height: 520px;">
+
+                            <!-- TOP - Business -->
+                            <div class="relative px-6 py-6 text-center"
+                                style="background: linear-gradient(180deg, #1e40af 0%, #3b82f6 50%, #60a5fa 100%);">
+
+                                <div class="mb-3">
+                                    <div class="text-5xl drop-shadow-xl inline-block">🍕</div>
+                                </div>
+
+                                <h1 class="text-white font-black text-2xl tracking-tight drop-shadow-lg mb-2"
+                                    style="font-family: 'Montserrat', 'Inter', system-ui, sans-serif; letter-spacing: -0.02em;">
+                                    Pizza Corner
+                                </h1>
+
+                                <div
+                                    class="px-3 py-1.5 bg-white/20 backdrop-blur-sm rounded-full inline-block border border-white/30">
+                                    <p class="text-white text-xs font-bold tracking-wide">
+                                        ⭐ Premium Dining
+                                    </p>
+                                </div>
+                            </div>
+
+                            <!-- MIDDLE - QR Code -->
+                            <div class="relative bg-white px-6 py-6">
+                                <div class="text-center mb-5">
+                                    <h2 class="text-slate-900 font-black text-xl mb-1.5 tracking-tight"
+                                        style="font-family: 'Montserrat', 'Inter', system-ui, sans-serif; letter-spacing: -0.01em;">
+                                        Love Our Food?
+                                    </h2>
+                                    <p class="text-slate-600 text-sm font-semibold">
+                                        Scan the QR code below
+                                    </p>
+                                </div>
+
+                                <!-- QR CODE -->
+                                <div class="flex justify-center mb-5">
+                                    <div class="relative">
+                                        <div class="absolute -inset-4 bg-blue-500/25 rounded-2xl blur-xl animate-pulse">
+                                        </div>
+                                        <div
+                                            class="relative bg-white p-3 rounded-2xl border-[3px] border-blue-500 shadow-lg">
+                                            <div
+                                                class="w-40 h-40 bg-slate-900 flex items-center justify-center text-white font-bold text-xs">
+                                                QR CODE<br />160×160px
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Instructions -->
+                                <div class="flex items-center justify-center gap-3 text-slate-700">
+                                    <div class="flex flex-col items-center">
+                                        <div
+                                            class="w-10 h-10 rounded-xl bg-blue-100 flex items-center justify-center mb-1.5 shadow-md">
+                                            <span class="text-xl">📱</span>
+                                        </div>
+                                        <span class="text-[10px] font-bold">Scan</span>
+                                    </div>
+
+                                    <div class="w-6 h-0.5 bg-blue-300 rounded-full"></div>
+
+                                    <div class="flex flex-col items-center">
+                                        <div
+                                            class="w-10 h-10 rounded-xl bg-blue-100 flex items-center justify-center mb-1.5 shadow-md">
+                                            <span class="text-xl">⭐</span>
+                                        </div>
+                                        <span class="text-[10px] font-bold">Rate</span>
+                                    </div>
+
+                                    <div class="w-6 h-0.5 bg-blue-300 rounded-full"></div>
+
+                                    <div class="flex flex-col items-center">
+                                        <div
+                                            class="w-10 h-10 rounded-xl bg-blue-100 flex items-center justify-center mb-1.5 shadow-md">
+                                            <span class="text-xl">❤️</span>
+                                        </div>
+                                        <span class="text-[10px] font-bold">Share</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- BOTTOM - Kaiten -->
+                            <div class="relative px-6 py-5 text-center"
+                                style="background: linear-gradient(180deg, #1e293b 0%, #334155 100%);">
+                                <div class="flex items-center justify-center gap-2 mb-1.5">
+                                    <span class="text-yellow-400 text-lg">✨</span>
+                                    <h3 class="text-white font-black text-lg tracking-wider"
+                                        style="font-family: 'Montserrat', 'Inter', system-ui, sans-serif; letter-spacing: 0.15em;">
+                                        KAITEN
+                                    </h3>
+                                    <span class="text-yellow-400 text-lg">✨</span>
+                                </div>
+                                <p class="text-white/90 text-xs font-black tracking-widest mb-1"
+                                    style="letter-spacing: 0.25em;">
+                                    AI REVIEW
+                                </p>
+                                <p class="text-white/70 text-[10px] font-semibold">Powered by AI</p>
+                            </div>
+                        </div>
+
+                        <!-- 3D Base -->
+                        <div class="absolute -bottom-1.5 left-0 right-0 h-5 rounded-b-3xl"
+                            style="background: linear-gradient(to bottom, rgba(0,0,0,0.1), rgba(0,0,0,0.2)); transform: translateZ(-8px) scaleX(0.98); filter: blur(1px);">
+                        </div>
+                    </div>
+                </div>
+
+                <p class="bg-red-500 text-white text-center py-2 font-bold text-sm">
+                    ⬆️ CONTAINER END ⬆️
+                </p>
+            </div>
+
+            <div class="mt-6 grid grid-cols-3 gap-4 text-center">
+                <div class="bg-green-100 border-2 border-green-500 rounded-xl p-4">
+                    <p class="text-3xl mb-2">✅</p>
+                    <p class="font-bold text-green-900">No Overflow</p>
+                    <p class="text-xs text-green-700 mt-1">Fits perfectly</p>
+                </div>
+                <div class="bg-green-100 border-2 border-green-500 rounded-xl p-4">
+                    <p class="text-3xl mb-2">✅</p>
+                    <p class="font-bold text-green-900">Proper Size</p>
+                    <p class="text-xs text-green-700 mt-1">260×520px</p>
+                </div>
+                <div class="bg-green-100 border-2 border-green-500 rounded-xl p-4">
+                    <p class="text-3xl mb-2">✅</p>
+                    <p class="font-bold text-green-900">Professional</p>
+                    <p class="text-xs text-green-700 mt-1">Clean design</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="mt-8 bg-gradient-to-r from-green-900 to-blue-900 rounded-2xl p-8 text-center">
+            <h2 class="text-3xl font-black text-white mb-4">📏 Exact Dimensions</h2>
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-4 text-white">
+                <div class="bg-white/10 rounded-xl p-4">
+                    <p class="text-2xl font-black text-green-400">600px</p>
+                    <p class="text-sm">Container Height</p>
+                </div>
+                <div class="bg-white/10 rounded-xl p-4">
+                    <p class="text-2xl font-black text-green-400">520px</p>
+                    <p class="text-sm">Stand Max Height</p>
+                </div>
+                <div class="bg-white/10 rounded-xl p-4">
+                    <p class="text-2xl font-black text-green-400">260px</p>
+                    <p class="text-sm">Stand Width</p>
+                </div>
+                <div class="bg-white/10 rounded-xl p-4">
+                    <p class="text-2xl font-black text-green-400">80px</p>
+                    <p class="text-sm">Clearance</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+
+</html>

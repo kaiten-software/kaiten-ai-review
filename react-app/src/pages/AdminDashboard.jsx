@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { getAllBusinesses } from '../data/businesses';
-import { getAllClients, updateClient, deleteClient } from '../lib/supabase';
+import { getAllClients, updateClient, deleteClient, getQROrders, updateQROrderStatus, deleteQROrder } from '../lib/supabase';
 import Logo from '../components/common/Logo';
 import AboutUs from './AboutUs';
 import Referrals from './Referrals';
@@ -26,7 +26,8 @@ import {
     PlusIcon,
     XMarkIcon,
     PencilIcon,
-    TrashIcon
+    TrashIcon,
+    TruckIcon
 } from '@heroicons/react/24/outline';
 
 export default function AdminDashboard() {
@@ -39,12 +40,34 @@ export default function AdminDashboard() {
     const [editingClient, setEditingClient] = useState(null);
     const [qrClient, setQRClient] = useState(null);
     const [clients, setClients] = useState([]);
+    const [qrOrders, setQrOrders] = useState([]);
     const [loading, setLoading] = useState(true);
+
+    // Shipment Modal State
+    const [showShipmentModal, setShowShipmentModal] = useState(false);
+    const [selectedOrderForShipment, setSelectedOrderForShipment] = useState(null);
+    const [shipmentDetails, setShipmentDetails] = useState({
+        courier: '',
+        trackingNumber: '',
+        deliveryDate: ''
+    });
+    const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
     // Load clients from Supabase
     useEffect(() => {
         loadClients();
+        loadQROrders();
     }, []);
+
+    const loadQROrders = async () => {
+        const result = await getQROrders();
+        if (result.success) {
+            setQrOrders(result.data || []);
+        } else {
+            console.error('Failed to load QR orders', result.error);
+            setQrOrders([]);
+        }
+    };
 
     const loadClients = async () => {
         setLoading(true);
@@ -194,6 +217,7 @@ export default function AdminDashboard() {
         { id: 'dashboard', name: 'Dashboard', icon: ChartBarIcon },
         { id: 'clients', name: 'Clients', icon: UsersIcon },
         { id: 'management', name: 'Client Management', icon: ClipboardDocumentCheckIcon },
+        { id: 'qr-orders', name: 'QR Plate Orders', icon: TruckIcon },
         { id: 'reviews', name: 'Reviews', icon: StarIcon },
         { id: 'analytics', name: 'Analytics', icon: ChartPieIcon },
         { id: 'referrals', name: 'Referrals', icon: UserGroupIcon },
@@ -637,6 +661,222 @@ export default function AdminDashboard() {
         </div>
     );
 
+    const renderQROrders = () => (<>
+        <div className="card overflow-hidden">
+            <h3 className="text-xl font-bold mb-6 flex items-center gap-2">
+                <TruckIcon className="w-6 h-6 text-blue-600" />
+                QR Stand Delivery Orders
+            </h3>
+
+            <div className="overflow-x-auto">
+                <table className="w-full">
+                    <thead className="bg-gray-50 border-b-2 border-gray-200">
+                        <tr>
+                            <th className="px-6 py-4 text-left text-sm font-semibold text-gray-700">Date</th>
+                            <th className="px-6 py-4 text-left text-sm font-semibold text-gray-700">Business</th>
+                            <th className="px-6 py-4 text-left text-sm font-semibold text-gray-700">Plate Details</th>
+                            <th className="px-6 py-4 text-left text-sm font-semibold text-gray-700">Design Choice</th>
+                            <th className="px-6 py-4 text-left text-sm font-semibold text-gray-700">Delivery Address</th>
+                            <th className="px-6 py-4 text-left text-sm font-semibold text-gray-700">Status</th>
+                            <th className="px-6 py-4 text-left text-sm font-semibold text-gray-700">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-200">
+                        {qrOrders.length === 0 ? (
+                            <tr>
+                                <td colSpan="6" className="px-6 py-8 text-center text-gray-500">
+                                    No orders placed yet.
+                                </td>
+                            </tr>
+                        ) : (
+                            qrOrders.map((order) => (
+                                <tr key={order.id} className="hover:bg-gray-50 transition-colors">
+                                    <td className="px-6 py-4 text-sm text-gray-600">
+                                        {new Date(order.created_at).toLocaleDateString()}
+                                    </td>
+                                    <td className="px-6 py-4">
+                                        <div className="font-bold text-gray-900">{order.business_name}</div>
+                                        <div className="text-xs text-gray-500">{order.business_id}</div>
+                                    </td>
+                                    <td className="px-6 py-4">
+                                        <div className="flex items-center gap-2">
+                                            <div className="px-2 py-1 bg-gray-100 rounded font-mono text-xs border border-gray-200">
+                                                {order.plate_number}
+                                            </div>
+                                        </div>
+                                        <div className="text-xs text-green-600 font-bold mt-1">Paid: ₹{order.price}</div>
+                                    </td>
+                                    <td className="px-6 py-4">
+                                        {order.design_info ? (
+                                            <div>
+                                                <div className="flex items-center gap-2 mb-1">
+                                                    <span className="w-4 h-4 rounded-full border border-gray-200 shadow-sm" style={{ backgroundColor: order.design_info.colorCode || '#ddd' }}></span>
+                                                    <span className="font-bold text-sm text-gray-800">{order.design_info.name || 'Custom'}</span>
+                                                </div>
+                                                <div className="text-xs text-gray-500">{order.design_info.details}</div>
+                                            </div>
+                                        ) : (
+                                            <span className="text-gray-400 italic text-xs">No design info</span>
+                                        )}
+                                    </td>
+                                    <td className="px-6 py-4">
+                                        <p className="text-sm text-gray-700 max-w-xs">{order.address}</p>
+                                    </td>
+                                    <td className="px-6 py-4">
+                                        <select
+                                            value={order.status}
+                                            onChange={async (e) => {
+                                                const newStatus = e.target.value;
+
+                                                if (newStatus === 'In Transit') {
+                                                    // Open Modal instead of immediate update
+                                                    setSelectedOrderForShipment(order);
+                                                    setShipmentDetails({ courier: '', trackingNumber: '', deliveryDate: '' });
+                                                    setShowShipmentModal(true);
+                                                    return;
+                                                }
+
+                                                // Optimistic update
+                                                setQrOrders(prev => prev.map(o => o.id === order.id ? { ...o, status: newStatus } : o));
+
+                                                const result = await updateQROrderStatus(order.id, newStatus);
+                                                if (!result.success) {
+                                                    alert('Error updating status');
+                                                    loadQROrders(); // Revert
+                                                }
+                                            }}
+                                            className={`px-3 py-1 rounded-full text-xs font-bold border-none outline-none cursor-pointer ${order.status === 'Delivered' ? 'bg-green-100 text-green-800' :
+                                                order.status === 'In Transit' ? 'bg-blue-100 text-blue-800' :
+                                                    'bg-yellow-100 text-yellow-800'
+                                                }`}
+                                        >
+                                            <option value="Payment Verified">Payment Verified</option>
+                                            <option value="In Transit">In Transit</option>
+                                            <option value="Delivered">Delivered</option>
+                                        </select>
+                                    </td>
+                                    <td className="px-6 py-4">
+                                        <button
+                                            onClick={async () => {
+                                                if (window.confirm('Are you sure you want to delete this order?')) {
+                                                    const result = await deleteQROrder(order.id);
+                                                    if (result.success) {
+                                                        loadQROrders();
+                                                    } else {
+                                                        alert('Error deleting order: ' + result.error);
+                                                    }
+                                                }
+                                            }}
+                                            className="text-red-600 hover:text-red-800 p-2 hover:bg-red-50 rounded transition-colors"
+                                            title="Delete Order"
+                                        >
+                                            <TrashIcon className="w-5 h-5" />
+                                        </button>
+                                    </td>
+                                </tr>
+                            ))
+                        )}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        {/* Shipment Modal */}
+        <AnimatePresence>
+            {showShipmentModal && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+                    <motion.div
+                        initial={{ opacity: 0, scale: 0.95 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        exit={{ opacity: 0, scale: 0.95 }}
+                        className="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden"
+                    >
+                        <div className="p-6 border-b border-gray-100 flex justify-between items-center">
+                            <h3 className="text-lg font-bold flex items-center gap-2">
+                                <TruckIcon className="w-5 h-5 text-blue-600" />
+                                Shipment Details
+                            </h3>
+                            <button onClick={() => setShowShipmentModal(false)} className="text-gray-400 hover:text-gray-600">
+                                <XMarkIcon className="w-6 h-6" />
+                            </button>
+                        </div>
+                        <div className="p-6 space-y-4">
+                            <div>
+                                <label className="block text-sm font-bold text-gray-700 mb-1">Courier Service</label>
+                                <input
+                                    type="text"
+                                    placeholder="e.g. FedEx, BlueDart"
+                                    className="w-full px-4 py-2 rounded-lg border border-gray-200 focus:border-blue-500 outline-none"
+                                    value={shipmentDetails.courier}
+                                    onChange={e => setShipmentDetails({ ...shipmentDetails, courier: e.target.value })}
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-sm font-bold text-gray-700 mb-1">Tracking Number</label>
+                                <input
+                                    type="text"
+                                    placeholder="Tracking Number / AWB"
+                                    className="w-full px-4 py-2 rounded-lg border border-gray-200 focus:border-blue-500 outline-none"
+                                    value={shipmentDetails.trackingNumber}
+                                    onChange={e => setShipmentDetails({ ...shipmentDetails, trackingNumber: e.target.value })}
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-sm font-bold text-gray-700 mb-1">Estimated Delivery Date</label>
+                                <input
+                                    type="date"
+                                    className="w-full px-4 py-2 rounded-lg border border-gray-200 focus:border-blue-500 outline-none"
+                                    value={shipmentDetails.deliveryDate}
+                                    onChange={e => setShipmentDetails({ ...shipmentDetails, deliveryDate: e.target.value })}
+                                />
+                            </div>
+                        </div>
+                        <div className="p-6 bg-gray-50 flex justify-end gap-3">
+                            <button
+                                onClick={() => setShowShipmentModal(false)}
+                                className="px-4 py-2 text-gray-600 font-bold hover:bg-gray-200 rounded-lg"
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                onClick={async () => {
+                                    if (!selectedOrderForShipment) return;
+
+                                    const shipmentInfo = {
+                                        courier: shipmentDetails.courier,
+                                        trackingNumber: shipmentDetails.trackingNumber,
+                                        estimatedDelivery: shipmentDetails.deliveryDate ? new Date(shipmentDetails.deliveryDate).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' }) : 'Soon',
+                                        status: 'In Transit',
+                                        timeline: [
+                                            { status: 'Order Placed', date: new Date(selectedOrderForShipment.created_at).toLocaleDateString(), completed: true },
+                                            { status: 'Processing', date: new Date().toLocaleDateString(), completed: true },
+                                            { status: 'In Transit', date: new Date().toLocaleDateString(), completed: true, current: true },
+                                            { status: 'Delivered', date: `Est. ${shipmentDetails.deliveryDate || 'Soon'}`, completed: false }
+                                        ]
+                                    };
+
+                                    // Update status and shipment info
+                                    const result = await updateQROrderStatus(selectedOrderForShipment.id, 'In Transit', { shipment_info: shipmentInfo });
+
+                                    if (result.success) {
+                                        alert('Order marked as In Transit!');
+                                        setShowShipmentModal(false);
+                                        loadQROrders();
+                                    } else {
+                                        alert('Error updating shipment: ' + result.error);
+                                    }
+                                }}
+                                className="px-6 py-2 bg-blue-600 text-white font-bold rounded-lg hover:bg-blue-700 shadow-lg shadow-blue-500/20"
+                            >
+                                Confirm Shipment
+                            </button>
+                        </div>
+                    </motion.div>
+                </div>
+            )}
+        </AnimatePresence>
+
+    </>);
+
     const renderManagement = () => {
         // Mock client credentials data (in production, fetch from database)
         const clientCredentials = [
@@ -895,8 +1135,6 @@ export default function AdminDashboard() {
         </div>
     );
 
-    const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-
     return (
         <div className="min-h-screen relative overflow-hidden bg-gradient-to-br from-blue-100 via-purple-100 to-pink-100 font-sans">
             {/* Animated Background Blobs */}
@@ -937,12 +1175,11 @@ export default function AdminDashboard() {
             )}
 
             {/* Sidebar */}
-            <div className={`fixed left-0 top-0 h-full w-72 bg-gradient-to-br from-slate-800 via-blue-900 to-indigo-900 shadow-2xl p-6 overflow-y-auto scrollbar-custom border-r border-white/10 z-50 transition-transform duration-300 ease-in-out md:translate-x-0 ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full'}`}>
+            <div className={`fixed left-0 top-0 h-full w-72 bg-gradient-to-br from-slate-800 via-blue-900 to-indigo-900 shadow-2xl flex flex-col z-50 transition-transform duration-300 ease-in-out md:translate-x-0 ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full'}`}>
                 {/* Logo */}
-                <div className="mb-12 pb-6 border-b border-white/20 flex flex-col">
-                    <div className="flex justify-between items-start">
-                        <Logo size="small" variant="full" className="mb-3" isDark={true} />
-                        {/* Close button for mobile within sidebar */}
+                <div className="flex-none p-6 border-b border-white/20">
+                    <div className="flex justify-between items-start mb-6">
+                        <Logo size="small" variant="full" isDark={true} />
                         <button
                             onClick={() => setIsMobileMenuOpen(false)}
                             className="md:hidden p-1 text-white/50 hover:text-white"
@@ -953,8 +1190,8 @@ export default function AdminDashboard() {
                     <div className="text-xs text-white/80 font-bold tracking-wider ml-1">ADMIN DASHBOARD</div>
                 </div>
 
-                {/* Navigation */}
-                <nav className="space-y-2 mb-8">
+                {/* Navigation - Scrollable Area */}
+                <nav className="flex-1 overflow-y-auto min-h-0 p-6 space-y-2 scrollbar-hide">
                     {navigationItems.map((item) => {
                         const Icon = item.icon;
                         return (
@@ -964,26 +1201,28 @@ export default function AdminDashboard() {
                                     setActiveTab(item.id);
                                     setIsMobileMenuOpen(false);
                                 }}
-                                className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all font-medium ${activeTab === item.id
+                                className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all font-medium whitespace-nowrap ${activeTab === item.id
                                     ? 'bg-white text-blue-600 shadow-lg'
                                     : 'hover:bg-white/10 text-white/90 hover:text-white'
                                     }`}
                             >
-                                <Icon className="w-5 h-5" />
+                                <Icon className="w-5 h-5 flex-shrink-0" />
                                 <span>{item.name}</span>
                             </button>
                         );
                     })}
                 </nav>
 
-                {/* Logout */}
-                <button
-                    onClick={handleLogout}
-                    className="absolute bottom-6 left-6 right-6 flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-white/20 hover:bg-white/30 backdrop-blur-lg transition-colors text-white font-medium shadow-lg border border-white/30"
-                >
-                    <ArrowRightOnRectangleIcon className="w-5 h-5" />
-                    <span>Logout</span>
-                </button>
+                {/* Logout - Fixed at Bottom */}
+                <div className="flex-none p-6 pt-2 bg-gradient-to-t from-indigo-900 to-transparent">
+                    <button
+                        onClick={handleLogout}
+                        className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-white/20 hover:bg-white/30 backdrop-blur-lg transition-colors text-white font-medium shadow-lg border border-white/30"
+                    >
+                        <ArrowRightOnRectangleIcon className="w-5 h-5" />
+                        <span>Logout</span>
+                    </button>
+                </div>
             </div>
 
             {/* Main Content */}
@@ -997,6 +1236,7 @@ export default function AdminDashboard() {
                         {activeTab === 'dashboard' && 'Welcome back, Admin!'}
                         {activeTab === 'clients' && 'Manage your business clients'}
                         {activeTab === 'management' && 'Control client credentials and account status'}
+                        {activeTab === 'qr-orders' && 'Manage orders for physical QR plates'}
                         {activeTab === 'reviews' && 'Monitor all reviews across businesses'}
                         {activeTab === 'analytics' && 'Detailed analytics and insights'}
                         {activeTab === 'referrals' && 'Manage referral program and earnings'}
@@ -1012,14 +1252,34 @@ export default function AdminDashboard() {
                 </div>
 
                 {/* Tab Content */}
-                {activeTab === 'dashboard' && renderDashboard()}
-                {activeTab === 'clients' && renderClients()}
-                {activeTab === 'management' && renderManagement()}
-                {activeTab === 'reviews' && renderReviews()}
-                {activeTab === 'analytics' && renderAnalytics()}
-                {activeTab === 'referrals' && <Referrals />}
-                {activeTab === 'whatsapp' && renderWhatsApp()}
-                {activeTab === 'about' && <AboutUs />}
+                {/* Tab Content */}
+                <main className="flex-1 w-full transition-all duration-300">
+                    <AnimatePresence mode="wait">
+                        <motion.div
+                            key={activeTab}
+                            initial={{ opacity: 0, y: 10 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            exit={{ opacity: 0, y: -10 }}
+                            transition={{ duration: 0.2 }}
+                        >
+                            {activeTab === 'dashboard' && renderDashboard()}
+                            {activeTab === 'clients' && renderClients()}
+                            {activeTab === 'management' && renderManagement()}
+                            {activeTab === 'qr-orders' && renderQROrders()}
+                            {activeTab === 'reviews' && renderReviews()}
+                            {activeTab === 'analytics' && renderAnalytics()}
+                            {activeTab === 'referrals' && <Referrals />}
+                            {activeTab === 'whatsapp' && (
+                                <div className="card text-center py-12">
+                                    <ChatBubbleLeftRightIcon className="w-16 h-16 text-green-500 mx-auto mb-4" />
+                                    <h3 className="text-xl font-bold mb-2">WhatsApp Integration</h3>
+                                    <p className="text-gray-600">Automated messaging features coming soon...</p>
+                                </div>
+                            )}
+                            {activeTab === 'about' && <AboutUs />}
+                        </motion.div>
+                    </AnimatePresence>
+                </main>
             </div>
             {/* Add/Edit Client Modal */}
             <AddClientModal

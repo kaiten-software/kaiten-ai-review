@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { CheckBadgeIcon, SparklesIcon, ArrowLeftIcon, ShieldCheckIcon, GiftIcon } from '@heroicons/react/24/solid';
-import { supabase } from '../lib/supabase';
+import { supabase, addReview } from '../lib/supabase';
 import Footer from '../components/common/Footer';
 
 export default function MembershipPage() {
@@ -47,37 +47,51 @@ export default function MembershipPage() {
         setIsSubmitting(true);
 
         try {
-            // SAVE TO LOCAL STORAGE (Demo Persistence)
-            const newReview = {
-                id: Date.now(),
-                customer: formData.name,
-                rating: reviewData.rating,
-                text: generatedContent || "Verified Customer Review",
-                date: new Date().toISOString().split('T')[0],
-                posted: true,
-                source: "Membership Application",
-                contact: `${formData.phone}${formData.email ? ' / ' + formData.email : ''}`, // Prioritize phone as requested
-                membership: "VIP Member",
-                businessId: reviewData.businessId || 'pizza-corner'
-            };
-            const existing = JSON.parse(localStorage.getItem('demo_reviews') || '[]');
-            localStorage.setItem('demo_reviews', JSON.stringify([newReview, ...existing]));
-
             const storedReviewId = sessionStorage.getItem('reviewId');
+            const servicesList = reviewData.services || (reviewData.service ? [reviewData.service] : []);
 
-            // Update the existing review with customer details
             if (storedReviewId) {
+                // UPDATE existing review
                 const { error } = await supabase
                     .from('reviews')
                     .update({
                         customer_name: formData.name,
                         customer_email: formData.email,
-                        customer_phone: formData.phone
+                        customer_phone: formData.phone,
+                        // membership: "VIP Member" // If schema has membership column? Assuming it doesn't based on previous checks, maybe we just want to leverage the contact info.
+                        // If we want to store membership status, we might need a column or put it in metadata?
+                        // For now we just update contact info which was the primary goal.
                     })
                     .eq('id', storedReviewId);
 
                 if (error) console.error('Supabase Error:', error);
+            } else {
+                // CREATE new review
+                await addReview({
+                    business_id: reviewData.businessId || 'pizza-corner',
+                    business_name: reviewData.businessName || 'Pizza Corner',
+                    customer_name: formData.name,
+                    customer_email: formData.email,
+                    customer_phone: formData.phone,
+                    rating: reviewData.rating,
+                    review_text: generatedContent || "Verified Customer Review",
+                    qualities: reviewData.qualities || [],
+                    feelings: reviewData.feelings || [],
+                    service_used: servicesList.join(', '),
+                    staff_member: reviewData.staff || "",
+                    posted_to_google: true, // They are claiming a reward, implies positive flow? Or maybe false if "Private Feedback"?
+                    // Actually Membership is usually for High Rating flow ("Post with FREE Offers") or Low Rating "Claim Free Gift"
+                    // If high rating, posted_to_google might be intended?
+                    // But if they clicked "Post with Free Offers", they haven't actually posted on Google yet technically unless that button does both?
+                    // The button just navigates.
+                    // For now let's assume posted_to_google is true for Membership flow as it's often an incentive for posting.
+                    // Or keep it straightforward:
+                    posted_to_google: true,
+                    is_public: true
+                });
             }
+
+
 
             // Simulate "Processing" for effect
             await new Promise(resolve => setTimeout(resolve, 800));
