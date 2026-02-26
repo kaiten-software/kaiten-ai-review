@@ -3,6 +3,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { LockClosedIcon, ShieldCheckIcon, UserIcon, BuildingStorefrontIcon } from '@heroicons/react/24/solid';
 import Logo from '../components/common/Logo';
+import { authenticateAdmin, supabase } from '../lib/supabase';
 
 export default function Login() {
     const navigate = useNavigate();
@@ -11,7 +12,7 @@ export default function Login() {
 
     const [loginMode, setLoginMode] = useState(defaultMode); // 'admin' or 'client'
     const [formData, setFormData] = useState({
-        username: defaultMode === 'admin' ? 'admin@kaitensoftware.com' : 'pizzacorner',
+        username: defaultMode === 'admin' ? 'admin@kaiten.com' : 'pizzacorner',
         password: defaultMode === 'admin' ? 'admin123' : 'demo123'
     });
     const [error, setError] = useState('');
@@ -22,7 +23,7 @@ export default function Login() {
         setLoginMode(mode);
         setError('');
         if (mode === 'admin') {
-            setFormData({ username: 'admin@kaitensoftware.com', password: 'admin123' });
+            setFormData({ username: 'admin@kaiten.com', password: 'admin123' });
         } else {
             setFormData({ username: 'pizzacorner', password: 'demo123' });
         }
@@ -33,55 +34,88 @@ export default function Login() {
         setIsLoading(true);
         setError('');
 
-        setTimeout(() => {
-            const username = formData.username.trim();
-            const password = formData.password.trim();
+        const username = formData.username.trim();
+        const password = formData.password.trim();
 
-            if (loginMode === 'admin') {
-                // Admin authentication
-                if (username === 'admin@kaitensoftware.com' && password === 'admin123') {
-                    sessionStorage.setItem('adminLoggedIn', 'true');
-                    // Clear client session to avoid conflicts
-                    sessionStorage.removeItem('clientLoggedIn');
-                    sessionStorage.removeItem('clientId');
-                    navigate('/admin/dashboard');
-                } else {
-                    setError('Invalid admin credentials');
-                    setIsLoading(false);
-                }
+        if (loginMode === 'admin') {
+            // Admin authentication with RBAC
+            const result = await authenticateAdmin(username, password);
+
+            if (result.success) {
+                // Store admin session data
+                sessionStorage.setItem('adminLoggedIn', 'true');
+                sessionStorage.setItem('adminId', result.data.id);
+                sessionStorage.setItem('adminRole', result.data.role);
+                sessionStorage.setItem('adminName', result.data.full_name);
+                sessionStorage.setItem('adminEmail', result.data.email);
+
+                // Clear client session to avoid conflicts
+                sessionStorage.removeItem('clientLoggedIn');
+                sessionStorage.removeItem('clientId');
+
+                navigate('/admin/dashboard');
             } else {
-                // Client authentication logic
-                const validClients = {
-                    'pizzacorner': { password: 'demo123', id: 'pizza-corner' },
-                    'rajssalon': { password: 'salon456', id: 'rajs-salon' }
-                };
+                setError(result.error || 'Invalid admin credentials');
+                setIsLoading(false);
+            }
+        } else {
+            // Client authentication - check Supabase first, then fallback to hardcoded
+            const validClients = {
+                'pizzacorner': { password: 'demo123', id: 'pizza-corner' },
+                'rajssalon': { password: 'salon456', id: 'rajs-salon' }
+            };
 
-                const client = validClients[username];
+            const client = validClients[username];
 
-                if (client && password === client.password) {
-                    sessionStorage.setItem('clientLoggedIn', 'true');
-                    sessionStorage.setItem('clientId', client.id);
-                    // Clear admin session just in case
-                    sessionStorage.removeItem('adminLoggedIn');
-                    navigate('/client/dashboard');
-                } else {
+            if (client && password === client.password) {
+                sessionStorage.setItem('clientLoggedIn', 'true');
+                sessionStorage.setItem('clientId', client.id);
+                sessionStorage.removeItem('adminLoggedIn');
+                sessionStorage.removeItem('adminRole');
+                navigate('/client/dashboard');
+            } else {
+                // Try Supabase dynamic login
+                try {
+                    const { data, error } = await supabase
+                        .from('clients')
+                        .select('business_id, login_username, login_password, subscription_status')
+                        .eq('login_username', username)
+                        .eq('login_password', password)
+                        .single();
+
+                    if (data && !error) {
+                        if (data.subscription_status === 'inactive') {
+                            setError('Your account is pending payment verification. Please wait for approval.');
+                            setIsLoading(false);
+                            return;
+                        }
+                        sessionStorage.setItem('clientLoggedIn', 'true');
+                        sessionStorage.setItem('clientId', data.business_id);
+                        sessionStorage.removeItem('adminLoggedIn');
+                        sessionStorage.removeItem('adminRole');
+                        navigate('/client/dashboard');
+                    } else {
+                        setError('Invalid client credentials');
+                        setIsLoading(false);
+                    }
+                } catch (dbErr) {
                     setError('Invalid client credentials');
                     setIsLoading(false);
                 }
             }
-        }, 800);
+        }
     };
 
     return (
-        <div className="min-h-screen relative overflow-hidden flex items-center justify-center p-4">
+        <div className="min-h-screen relative overflow-hidden flex items-center justify-center p-2 sm:p-4">
             {/* Gradient Background */}
             <div className="absolute inset-0 bg-gradient-to-br from-slate-900 via-blue-900 to-indigo-900"></div>
 
             {/* Animated Background Elements */}
             <div className="absolute inset-0 opacity-20">
-                <div className="absolute top-20 left-10 w-96 h-96 bg-blue-500 rounded-full mix-blend-multiply filter blur-3xl animate-blob"></div>
-                <div className="absolute top-40 right-10 w-96 h-96 bg-indigo-500 rounded-full mix-blend-multiply filter blur-3xl animate-blob animation-delay-2000"></div>
-                <div className="absolute bottom-20 left-1/2 w-96 h-96 bg-purple-500 rounded-full mix-blend-multiply filter blur-3xl animate-blob animation-delay-4000"></div>
+                <div className="absolute top-10 sm:top-20 left-5 sm:left-10 w-48 sm:w-96 h-48 sm:h-96 bg-blue-500 rounded-full mix-blend-multiply filter blur-3xl animate-blob"></div>
+                <div className="absolute top-20 sm:top-40 right-5 sm:right-10 w-48 sm:w-96 h-48 sm:h-96 bg-indigo-500 rounded-full mix-blend-multiply filter blur-3xl animate-blob animation-delay-2000"></div>
+                <div className="absolute bottom-10 sm:bottom-20 left-1/2 w-48 sm:w-96 h-48 sm:h-96 bg-purple-500 rounded-full mix-blend-multiply filter blur-3xl animate-blob animation-delay-4000"></div>
             </div>
 
             {/* Pattern Overlay */}
@@ -156,12 +190,12 @@ export default function Login() {
                     className="w-full"
                 >
                     {/* Mobile Logo */}
-                    <div className="md:hidden text-center mb-8">
-                        <Logo size="medium" variant="full" className="justify-center mb-4" isDark={true} />
-                        <h2 className="text-2xl font-bold text-white">Login</h2>
+                    <div className="md:hidden text-center mb-6">
+                        <Logo size="medium" variant="full" className="justify-center mb-3" isDark={true} />
+                        <h2 className="text-xl sm:text-2xl font-bold text-white">Login</h2>
                     </div>
 
-                    <div className="bg-white rounded-3xl shadow-2xl p-8 md:p-10">
+                    <div className="bg-white rounded-2xl sm:rounded-3xl shadow-2xl p-4 sm:p-6 md:p-10 max-w-mobile-safe mx-auto">
                         {/* Mode Toggle */}
                         <div className="flex gap-2 mb-8 p-1 bg-gray-100 rounded-xl">
                             <button
@@ -206,7 +240,7 @@ export default function Login() {
                                         value={formData.username}
                                         onChange={(e) => setFormData({ ...formData, username: e.target.value })}
                                         className="w-full px-4 py-4 pl-12 rounded-xl border-2 border-gray-200 focus:border-indigo-500 focus:outline-none transition-all text-gray-900 placeholder-gray-400"
-                                        placeholder={loginMode === 'admin' ? 'admin@kaitensoftware.com' : 'pizzacorner'}
+                                        placeholder={loginMode === 'admin' ? 'admin@kaiten.com' : 'pizzacorner'}
                                         required
                                     />
                                     <UserIcon className="w-5 h-5 text-gray-400 absolute left-4 top-1/2 -translate-y-1/2" />
@@ -246,7 +280,7 @@ export default function Login() {
                                 disabled={isLoading}
                                 className={`w-full font-bold py-4 px-6 rounded-xl transition-all duration-300 flex items-center justify-center gap-3 shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed ${loginMode === 'admin'
                                     ? 'bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white'
-                                    : 'bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 text-white'
+                                    : 'bg-gradient-to-r from-orange-500 to-red-600 hover:from-orange-600 hover:to-red-700 text-white'
                                     }`}
                             >
                                 {isLoading ? (
@@ -267,20 +301,43 @@ export default function Login() {
                             ? 'bg-gradient-to-r from-blue-50 to-indigo-50 border-blue-100'
                             : 'bg-gradient-to-r from-orange-50 to-red-50 border-orange-100'
                             }`}>
-                            <p className="text-sm font-semibold text-gray-700 mb-2">Demo Credentials:</p>
-                            <div className="font-mono text-sm bg-white px-4 py-3 rounded-lg border border-gray-200">
-                                {loginMode === 'admin' ? (
-                                    <>
-                                        <p className="text-gray-600">Email: <span className="text-gray-900 font-semibold">admin@kaitensoftware.com</span></p>
+                            <p className="text-sm font-semibold text-gray-700 mb-2 sm:mb-3">Demo Credentials:</p>
+                            {loginMode === 'admin' ? (
+                                <div className="space-y-2 sm:space-y-3 max-h-64 sm:max-h-none overflow-y-auto pr-1 scrollbar-custom">
+                                    {/* Super Admin */}
+                                    <div className="font-mono text-[10px] sm:text-xs bg-white px-2 sm:px-3 py-1.5 sm:py-2 rounded-lg border border-gray-200">
+                                        <p className="text-gray-500 text-[9px] sm:text-[10px] uppercase tracking-wide mb-0.5 sm:mb-1">Super Admin</p>
+                                        <p className="text-gray-600 truncate">Email: <span className="text-gray-900 font-semibold">admin@kaiten.com</span></p>
                                         <p className="text-gray-600">Password: <span className="text-gray-900 font-semibold">admin123</span></p>
-                                    </>
-                                ) : (
-                                    <>
-                                        <p className="text-gray-600">Username: <span className="text-gray-900 font-semibold">pizzacorner</span></p>
-                                        <p className="text-gray-600">Password: <span className="text-gray-900 font-semibold">demo123</span></p>
-                                    </>
-                                )}
-                            </div>
+                                    </div>
+
+                                    {/* Accountant */}
+                                    <div className="font-mono text-[10px] sm:text-xs bg-white px-2 sm:px-3 py-1.5 sm:py-2 rounded-lg border border-gray-200">
+                                        <p className="text-gray-500 text-[9px] sm:text-[10px] uppercase tracking-wide mb-0.5 sm:mb-1">Accountant</p>
+                                        <p className="text-gray-600 truncate">Email: <span className="text-gray-900 font-semibold">accountant@kaiten.com</span></p>
+                                        <p className="text-gray-600">Password: <span className="text-gray-900 font-semibold">account123</span></p>
+                                    </div>
+
+                                    {/* Staff */}
+                                    <div className="font-mono text-[10px] sm:text-xs bg-white px-2 sm:px-3 py-1.5 sm:py-2 rounded-lg border border-gray-200">
+                                        <p className="text-gray-500 text-[9px] sm:text-[10px] uppercase tracking-wide mb-0.5 sm:mb-1">Staff (Read-Only)</p>
+                                        <p className="text-gray-600 truncate">Email: <span className="text-gray-900 font-semibold">staff@kaiten.com</span></p>
+                                        <p className="text-gray-600">Password: <span className="text-gray-900 font-semibold">staff123</span></p>
+                                    </div>
+
+                                    {/* FSR Manager */}
+                                    <div className="font-mono text-[10px] sm:text-xs bg-white px-2 sm:px-3 py-1.5 sm:py-2 rounded-lg border border-gray-200">
+                                        <p className="text-gray-500 text-[9px] sm:text-[10px] uppercase tracking-wide mb-0.5 sm:mb-1">FSR Manager</p>
+                                        <p className="text-gray-600 truncate">Email: <span className="text-gray-900 font-semibold">fsrmanager@kaiten.com</span></p>
+                                        <p className="text-gray-600">Password: <span className="text-gray-900 font-semibold">fsr123</span></p>
+                                    </div>
+                                </div>
+                            ) : (
+                                <div className="font-mono text-sm bg-white px-4 py-3 rounded-lg border border-gray-200">
+                                    <p className="text-gray-600">Username: <span className="text-gray-900 font-semibold">pizzacorner</span></p>
+                                    <p className="text-gray-600">Password: <span className="text-gray-900 font-semibold">demo123</span></p>
+                                </div>
+                            )}
                         </div>
                     </div>
 

@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { StarIcon, ClipboardDocumentIcon, ArrowLeftIcon, SparklesIcon, CheckBadgeIcon, ShieldCheckIcon, CheckCircleIcon, GiftIcon } from '@heroicons/react/24/solid';
 import Footer from '../components/common/Footer';
 import { addReview } from '../lib/supabase';
+import { generateAIText } from '../lib/aiText';
 
 export default function ReviewGenerated() {
     const navigate = useNavigate();
@@ -11,6 +12,7 @@ export default function ReviewGenerated() {
     const [generatedContent, setGeneratedContent] = useState('');
     const [feedbackSubmitted, setFeedbackSubmitted] = useState(false);
     const [isSubmittingFeedback, setIsSubmittingFeedback] = useState(false);
+    const [isGenerating, setIsGenerating] = useState(true);
     const [showToast, setShowToast] = useState(false);
 
     // Safe Copy Function for HTTP/HTTPS
@@ -41,31 +43,59 @@ export default function ReviewGenerated() {
     };
 
     useEffect(() => {
-        const data = sessionStorage.getItem('reviewData');
-        if (!data) {
-            navigate('/');
-            return;
-        }
-        const parsed = JSON.parse(data);
-        setReviewData(parsed);
+        const loadReview = async () => {
+            const data = sessionStorage.getItem('reviewData');
+            if (!data) {
+                navigate('/');
+                return;
+            }
+            const parsed = JSON.parse(data);
+            setReviewData(parsed);
 
-        let content = '';
-        // Generate content based on rating
-        if (parsed.rating > 3) {
-            content = generateMediumReview(parsed);
-        } else {
-            content = generateConstructiveFeedback(parsed);
-        }
-        setGeneratedContent(content);
+            let content = '';
+            const { businessName, service, services, staff, qualities, additional, rating } = parsed;
+            const serviceList = services && services.length > 0 ? services.join(' and ') : service;
 
-        // Auto-copy to clipboard
-        if (content) {
-            sessionStorage.setItem('generatedReview', content); // Save for later use
-            copyToClipboard(content).then(() => {
-                setShowToast(true);
-                setTimeout(() => setShowToast(false), 4000);
-            }).catch(err => console.log('Auto-copy blocked:', err));
-        }
+            // Try generating using GPT API
+            let prompt = `Write a short, natural, conversational 2-3 sentence customer review for "${businessName}".\n`;
+            prompt += `Rating: ${rating} out of 5 stars.\n`;
+            if (serviceList) prompt += `Service received: ${serviceList}.\n`;
+            if (staff && staff !== "Didn't interact") prompt += `Staff member involved: ${staff}.\n`;
+            if (qualities && qualities.length > 0) prompt += `Qualities about the business: ${qualities.join(', ')}.\n`;
+            if (additional) prompt += `Additional thoughts: "${additional}".\n`;
+
+            if (rating > 3) {
+                prompt += `Tone: Highly positive, enthusiastic, genuine.`;
+            } else {
+                prompt += `Tone: Polite but disappointed, constructive feedback.`;
+            }
+
+            const aiContent = await generateAIText(prompt);
+
+            if (aiContent) {
+                content = aiContent;
+            } else {
+                if (rating > 3) {
+                    content = generateMediumReview(parsed);
+                } else {
+                    content = generateConstructiveFeedback(parsed);
+                }
+            }
+
+            setGeneratedContent(content);
+            setIsGenerating(false);
+
+            // Auto-copy to clipboard
+            if (content) {
+                sessionStorage.setItem('generatedReview', content); // Save for later use
+                copyToClipboard(content).then(() => {
+                    setShowToast(true);
+                    setTimeout(() => setShowToast(false), 4000);
+                }).catch(err => console.log('Auto-copy blocked:', err));
+            }
+        };
+
+        loadReview();
     }, [navigate]);
 
     const generateMediumReview = (data) => {
@@ -211,27 +241,27 @@ export default function ReviewGenerated() {
             <div className="fixed inset-0 -z-10 bg-black/60 backdrop-blur-md" />
 
             {/* Navbar (simplified) */}
-            <div className="fixed top-0 inset-x-0 z-40 p-4 flex justify-between items-center text-white bg-gradient-to-b from-black/50 to-transparent">
-                <button onClick={handleGoBack} className="flex items-center gap-2 opacity-80 hover:opacity-100 font-medium px-4 py-2 rounded-full bg-white/10 hover:bg-white/20 transition-all backdrop-blur-md">
-                    <ArrowLeftIcon className="w-5 h-5" /> Back
+            <div className="fixed top-0 inset-x-0 z-40 p-3 sm:p-4 flex justify-between items-center text-white bg-gradient-to-b from-black/50 to-transparent">
+                <button onClick={handleGoBack} className="flex items-center gap-1.5 sm:gap-2 opacity-80 hover:opacity-100 font-medium px-3 sm:px-4 py-1.5 sm:py-2 rounded-full bg-white/10 hover:bg-white/20 transition-all backdrop-blur-md text-sm sm:text-base">
+                    <ArrowLeftIcon className="w-4 h-4 sm:w-5 h-5" /> Back
                 </button>
                 <div className="flex items-center gap-3">
-                    <span className="font-bold text-lg hidden sm:block">{reviewData.businessName}</span>
-                    <div className="text-3xl filter drop-shadow-lg">{reviewData.businessLogo}</div>
+                    <span className="font-bold text-base sm:text-lg hidden sm:block">{reviewData.businessName}</span>
+                    <div className="text-2xl sm:text-3xl filter drop-shadow-lg">{reviewData.businessLogo}</div>
                 </div>
             </div>
 
-            <main className="container-custom pt-28 pb-12 flex-grow max-w-4xl mx-auto flex flex-col justify-center items-center">
-                <div className="text-center mb-10 w-full">
+            <main className="container-custom pt-20 sm:pt-28 pb-8 sm:pb-12 flex-grow max-w-4xl mx-auto flex flex-col justify-center items-center px-4">
+                <div className="text-center mb-6 sm:mb-10 w-full">
                     <motion.div
                         initial={{ opacity: 0, y: 20 }}
                         animate={{ opacity: 1, y: 0 }}
                         className="inline-block"
                     >
-                        <h1 className="text-4xl md:text-5xl font-black text-white mb-4 drop-shadow-lg">
+                        <h1 className="text-3xl sm:text-4xl md:text-5xl font-black text-white mb-3 sm:mb-4 drop-shadow-lg">
                             {isHighRating ? "Share the Love! ❤️" : "We Value Your Feedback 🙏"}
                         </h1>
-                        <p className="text-xl text-white/90 font-medium max-w-2xl mx-auto">
+                        <p className="text-lg sm:text-xl text-white/90 font-medium max-w-2xl mx-auto">
                             {isHighRating
                                 ? "Your support helps us grow."
                                 : "Help us improve our service."}
@@ -242,20 +272,19 @@ export default function ReviewGenerated() {
                 <motion.div
                     initial={{ scale: 0.95, opacity: 0 }}
                     animate={{ scale: 1, opacity: 1 }}
-                    className="bg-white/95 backdrop-blur-xl rounded-[2.5rem] p-8 md:p-12 shadow-2xl ring-1 ring-white/20 relative overflow-hidden w-full max-w-2xl"
+                    className="bg-white/95 backdrop-blur-xl rounded-2xl sm:rounded-[2.5rem] p-6 sm:p-8 md:p-12 shadow-2xl ring-1 ring-white/20 relative overflow-hidden w-full max-w-2xl"
                 >
                     {/* Review Text Display */}
-                    <div className="bg-slate-50 p-6 rounded-2xl border border-slate-100 mb-8 shadow-inner relative z-10">
-                        <div className="absolute -top-3 -left-3 text-6xl text-slate-200 font-serif leading-none">“</div>
-                        <p className="text-slate-700 leading-relaxed font-medium italic text-lg text-center px-4 relative z-10">
+                    <div className="bg-slate-50 p-4 sm:p-6 rounded-xl sm:rounded-2xl border border-slate-100 mb-6 sm:mb-8 shadow-inner relative z-10">
+                        <div className="absolute -top-2 -left-2 sm:-top-3 sm:-left-3 text-4xl sm:text-6xl text-slate-200 font-serif leading-none">“</div>
+                        <p className="text-slate-700 leading-relaxed font-medium italic text-base sm:text-lg text-center px-2 sm:px-4 relative z-10 break-words">
                             {generatedContent}
                         </p>
-                        <div className="absolute -bottom-8 -right-3 text-6xl text-slate-200 font-serif leading-none rotate-180">“</div>
+                        <div className="absolute -bottom-6 -right-2 sm:-bottom-8 sm:-right-3 text-4xl sm:text-6xl text-slate-200 font-serif leading-none rotate-180">“</div>
                     </div>
 
                     {/* Action Buttons */}
-                    {/* Action Buttons */}
-                    <div className="flex flex-col gap-4 mt-8">
+                    <div className="flex flex-col gap-3 sm:gap-4 mt-6 sm:mt-8">
                         {isHighRating ? (
                             // HIGH RATING FLOW: Dual path
                             <>
@@ -265,29 +294,29 @@ export default function ReviewGenerated() {
 
                                     <button
                                         onClick={() => navigate('/membership')}
-                                        className="relative w-full py-5 bg-gradient-to-r from-slate-900 to-slate-800 border border-white/10 text-white rounded-xl font-bold text-xl shadow-2xl flex items-center justify-center gap-3 transition-transform active:scale-95 group overflow-hidden"
+                                        className="relative w-full py-4 sm:py-5 bg-gradient-to-r from-slate-900 to-slate-800 border border-white/10 text-white rounded-xl font-bold text-lg sm:text-xl shadow-2xl flex items-center justify-center gap-2 sm:gap-3 transition-transform active:scale-95 group overflow-hidden"
                                     >
                                         <span className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -translate-x-full group-hover:animate-[shimmer_1.5s_infinite]"></span>
 
-                                        <GiftIcon className="w-7 h-7 text-yellow-400 animate-bounce relative z-10" />
-                                        <span className="relative z-10 tracking-wide text-white">
+                                        <GiftIcon className="w-6 h-6 sm:w-7 sm:h-7 text-yellow-400 animate-bounce relative z-10" />
+                                        <span className="relative z-10 tracking-wide text-white text-sm sm:text-base">
                                             Post with <span className="text-yellow-400 font-black">FREE</span> Offers
                                         </span>
                                     </button>
                                 </div>
 
-                                <div className="flex items-center gap-4 px-8 py-2">
+                                <div className="flex items-center gap-4 px-8 py-1 sm:py-2">
                                     <div className="h-px bg-slate-200 flex-1"></div>
-                                    <span className="text-slate-400 text-sm font-medium">or</span>
+                                    <span className="text-slate-400 text-xs sm:text-sm font-medium">or</span>
                                     <div className="h-px bg-slate-200 flex-1"></div>
                                 </div>
 
                                 <button
                                     onClick={handlePostOnGoogle}
-                                    className="w-full py-4 bg-white hover:bg-slate-50 border border-slate-200 text-slate-700 rounded-xl font-bold text-lg shadow-sm hover:shadow-md flex items-center justify-center gap-3 transition-all active:scale-95 group relative overflow-hidden"
+                                    className="w-full py-3 sm:py-4 bg-white hover:bg-slate-50 border border-slate-200 text-slate-700 rounded-xl font-bold text-base sm:text-lg shadow-sm hover:shadow-md flex items-center justify-center gap-2 sm:gap-3 transition-all active:scale-95 group relative overflow-hidden"
                                 >
-                                    <div className="flex items-center gap-3 relative z-10">
-                                        <svg className="w-6 h-6" viewBox="0 0 24 24">
+                                    <div className="flex items-center gap-2 sm:gap-3 relative z-10">
+                                        <svg className="w-5 h-5 sm:w-6 sm:h-6" viewBox="0 0 24 24">
                                             <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4" />
                                             <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853" />
                                             <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05" />
@@ -300,9 +329,9 @@ export default function ReviewGenerated() {
                             </>
                         ) : (
                             // LOW RATING FLOW: Feedback + Optional Membership
-                            <div className="grid sm:grid-cols-2 gap-4 w-full">
+                            <div className="grid sm:grid-cols-2 gap-3 sm:gap-4 w-full">
                                 {feedbackSubmitted ? (
-                                    <div className="w-full py-4 bg-green-50 text-green-700 rounded-xl font-bold text-lg flex items-center justify-center gap-2 border border-green-200">
+                                    <div className="w-full py-3 sm:py-4 bg-green-50 text-green-700 rounded-xl font-bold text-base sm:text-lg flex items-center justify-center gap-2 border border-green-200">
                                         <CheckBadgeIcon className="w-5 h-5" />
                                         Sent!
                                     </div>
@@ -310,7 +339,7 @@ export default function ReviewGenerated() {
                                     <button
                                         onClick={handleSubmitPrivateFeedback}
                                         disabled={isSubmittingFeedback}
-                                        className="w-full py-4 bg-slate-800 hover:bg-slate-900 text-white rounded-xl font-bold text-lg shadow-lg shadow-slate-900/20 flex items-center justify-center gap-2 transition-transform active:scale-95"
+                                        className="w-full py-3 sm:py-4 bg-slate-800 hover:bg-slate-900 text-white rounded-xl font-bold text-base sm:text-lg shadow-lg shadow-slate-900/20 flex items-center justify-center gap-2 transition-transform active:scale-95"
                                     >
                                         {isSubmittingFeedback ? "Sending..." : "Submit Feedback"}
                                     </button>
@@ -318,7 +347,7 @@ export default function ReviewGenerated() {
 
                                 <button
                                     onClick={() => navigate('/membership')}
-                                    className="w-full py-4 bg-transparent border-2 border-indigo-100 hover:border-indigo-300 text-indigo-600 hover:text-indigo-700 rounded-xl font-bold text-lg flex items-center justify-center gap-2 transition-all active:scale-95"
+                                    className="w-full py-3 sm:py-4 bg-transparent border-2 border-indigo-100 hover:border-indigo-300 text-indigo-600 hover:text-indigo-700 rounded-xl font-bold text-base sm:text-lg flex items-center justify-center gap-2 transition-all active:scale-95"
                                 >
                                     <GiftIcon className="w-5 h-5" />
                                     Claim Free Gift
@@ -327,7 +356,7 @@ export default function ReviewGenerated() {
                         )}
                     </div>
 
-                    <p className="text-center text-slate-400 text-xs mt-6 font-medium">
+                    <p className="text-center text-slate-400 text-[10px] sm:text-xs mt-4 sm:mt-6 font-medium">
                         {isHighRating ? "Review text has been copied for you!" : "Your feedback is private"}
                     </p>
 
@@ -338,12 +367,12 @@ export default function ReviewGenerated() {
             <AnimatePresence>
                 {showToast && (
                     <motion.div
-                        initial={{ opacity: 0, y: 50, x: 50 }}
+                        initial={{ opacity: 0, y: 50, x: 0 }}
                         animate={{ opacity: 1, y: 0, x: 0 }}
-                        exit={{ opacity: 0, y: 50, x: 50 }}
-                        className="fixed bottom-6 right-6 z-50 bg-slate-900 text-white px-6 py-4 rounded-xl shadow-2xl flex items-center gap-3 border border-white/10"
+                        exit={{ opacity: 0, y: 50, x: 0 }}
+                        className="fixed bottom-4 sm:bottom-6 left-1/2 -translate-x-1/2 sm:left-auto sm:translate-x-0 sm:right-6 z-50 bg-slate-900 text-white px-5 sm:px-6 py-3 sm:py-4 rounded-xl shadow-2xl flex items-center gap-3 border border-white/10 w-[90vw] sm:w-auto max-w-sm"
                     >
-                        <div className="bg-green-500 rounded-full p-1">
+                        <div className="bg-green-500 rounded-full p-1 flex-shrink-0">
                             <CheckCircleIcon className="w-5 h-5 text-white" />
                         </div>
                         <div>

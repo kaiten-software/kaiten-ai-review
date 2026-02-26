@@ -15,7 +15,7 @@ export const renderQRDesign = (activeDesign, qrCodeUrl, businessData) => {
                 <div className="relative w-[240px] h-[336px] bg-white rounded-lg shadow-[0_10px_40px_rgba(0,0,0,0.15)] overflow-hidden border-4 border-white">
                     {/* Top Section - Branding (Blue Background) */}
                     <div className="relative h-[80px] bg-gradient-to-br from-blue-600 to-blue-700 flex flex-col items-center justify-center px-4 py-3">
-                        <h2 className="text-white font-black text-lg tracking-tight">KAITEN</h2>
+                        <h2 className="text-white font-black text-lg tracking-tight">RANKBAG</h2>
                         <p className="text-blue-100 text-[10px] font-bold tracking-wider mt-0.5">AI REVIEW</p>
                     </div>
 
@@ -70,7 +70,7 @@ export const renderQRDesign = (activeDesign, qrCodeUrl, businessData) => {
                 <div className="relative w-[240px] h-[336px] bg-white rounded-lg shadow-[0_10px_40px_rgba(0,0,0,0.15)] overflow-hidden border-4 border-white">
                     {/* Top - Green Branding */}
                     <div className="relative h-[80px] bg-gradient-to-br from-emerald-600 to-green-700 flex flex-col items-center justify-center px-4 py-3">
-                        <h2 className="text-white font-black text-lg tracking-tight">KAITEN</h2>
+                        <h2 className="text-white font-black text-lg tracking-tight">RANKBAG</h2>
                         <p className="text-green-100 text-[10px] font-bold tracking-wider mt-0.5">AI REVIEW</p>
                     </div>
 
@@ -92,7 +92,7 @@ export const renderQRDesign = (activeDesign, qrCodeUrl, businessData) => {
                     <div className="absolute bottom-0 left-0 right-0 h-[60px] bg-gradient-to-br from-green-900 to-emerald-950 flex items-center justify-center px-4">
                         <div className="text-center">
                             <p className="text-green-100 text-[10px] font-bold">Scan • Rate • Review</p>
-                            <p className="text-green-300 text-[8px] font-medium mt-0.5">Powered by Kaiten AI</p>
+                            <p className="text-green-300 text-[8px] font-medium mt-0.5">Powered by Rankbag</p>
                         </div>
                     </div>
                 </div>
@@ -109,7 +109,7 @@ export const renderQRDesign = (activeDesign, qrCodeUrl, businessData) => {
                 <div className="relative w-[240px] h-[336px] bg-white rounded-lg shadow-[0_10px_40px_rgba(0,0,0,0.15)] overflow-hidden border-4 border-white">
                     {/* Top - Purple Branding */}
                     <div className="relative h-[80px] bg-gradient-to-br from-purple-600 to-violet-700 flex flex-col items-center justify-center px-4 py-3">
-                        <h2 className="text-white font-black text-lg tracking-tight">KAITEN</h2>
+                        <h2 className="text-white font-black text-lg tracking-tight">RANKBAG</h2>
                         <p className="text-purple-100 text-[10px] font-bold tracking-wider mt-0.5">AI REVIEW</p>
                     </div>
 
@@ -148,7 +148,7 @@ export const renderQRDesign = (activeDesign, qrCodeUrl, businessData) => {
                 <div className="relative w-[240px] h-[336px] bg-white rounded-lg shadow-[0_10px_40px_rgba(0,0,0,0.15)] overflow-hidden border-4 border-white">
                     {/* Top - Orange Branding */}
                     <div className="relative h-[80px] bg-gradient-to-br from-orange-600 to-amber-700 flex flex-col items-center justify-center px-4 py-3">
-                        <h2 className="text-white font-black text-lg tracking-tight">KAITEN</h2>
+                        <h2 className="text-white font-black text-lg tracking-tight">RANKBAG</h2>
                         <p className="text-orange-100 text-[10px] font-bold tracking-wider mt-0.5">AI REVIEW</p>
                     </div>
 
@@ -187,7 +187,7 @@ export const renderQRDesign = (activeDesign, qrCodeUrl, businessData) => {
                 <div className="relative w-[240px] h-[336px] bg-white rounded-lg shadow-[0_10px_40px_rgba(0,0,0,0.15)] overflow-hidden border-4 border-white">
                     {/* Top - Cyan Branding */}
                     <div className="relative h-[80px] bg-gradient-to-br from-cyan-600 to-sky-700 flex flex-col items-center justify-center px-4 py-3">
-                        <h2 className="text-white font-black text-lg tracking-tight">KAITEN</h2>
+                        <h2 className="text-white font-black text-lg tracking-tight">RANKBAG</h2>
                         <p className="text-cyan-100 text-[10px] font-bold tracking-wider mt-0.5">AI REVIEW</p>
                     </div>
 

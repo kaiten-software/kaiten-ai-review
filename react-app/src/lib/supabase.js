@@ -45,13 +45,85 @@ export const addClient = async (clientData) => {
         if (clientData.feelings) optionalFields.feelings = clientData.feelings;
         if (clientData.search_keywords) optionalFields.search_keywords = clientData.search_keywords;
         if (clientData.gallery) optionalFields.gallery = clientData.gallery;
+        if (clientData.referral_code) optionalFields.referral_code = clientData.referral_code;
+        if (clientData.referred_by) optionalFields.referred_by = clientData.referred_by;
+        if (clientData.credit_points !== undefined) optionalFields.credit_points = clientData.credit_points;
+        if (clientData.utr_number) optionalFields.utr_number = clientData.utr_number;
 
-        const { data, error } = await supabase
-            .from('clients')
-            .insert([{ ...baseData, ...optionalFields }])
-            .select();
+        let currentPayload = { ...baseData, ...optionalFields };
+        let resultData = null;
+        let resultError = null;
+        let isSuccess = false;
 
-        if (error) throw error;
+        // Try inserting up to 10 times to clear out multiple missing columns if needed
+        for (let attempt = 0; attempt < 10; attempt++) {
+            const { data, error } = await supabase
+                .from('clients')
+                .insert([currentPayload])
+                .select();
+
+            if (!error) {
+                resultData = data;
+                isSuccess = true;
+                break;
+            }
+
+            // check if missing column error
+            if (error.message?.includes('could not find') || error.message?.includes('column')) {
+                console.warn(`DB schema mismatch on attempt ${attempt + 1}:`, error.message);
+                const match = error.message.match(/find the '([^']+)' column/i) || error.message.match(/column "([^"]+)"/i);
+
+                if (match && match[1]) {
+                    const missingCol = match[1];
+                    console.log(`Retrying insert without missing column: ${missingCol}`);
+                    delete currentPayload[missingCol];
+                    continue; // Try again!
+                }
+            }
+
+            // If it's a different error or we couldn't parse the column, fallback to base data
+            console.warn('Could not parse missing column or different error. Retrying with bare base data...');
+            const { data: fallbackData, error: fallbackError } = await supabase
+                .from('clients')
+                .insert([baseData])
+                .select();
+
+            if (fallbackError) {
+                resultError = fallbackError;
+            } else {
+                resultData = fallbackData;
+                isSuccess = true;
+            }
+            break;
+        }
+
+        if (!isSuccess) {
+            throw resultError || new Error("Failed to insert client after multiple attempts.");
+        }
+
+        const data = resultData;
+
+        // Process referral points if a referred_by code is provided
+        if (clientData.referred_by) {
+            try {
+                // Find referring business and update points
+                const { data: refData } = await supabase
+                    .from('clients')
+                    .select('business_id, credit_points')
+                    .eq('referral_code', clientData.referred_by)
+                    .single();
+
+                if (refData) {
+                    await supabase
+                        .from('clients')
+                        .update({ credit_points: (refData.credit_points || 0) + 10 })
+                        .eq('business_id', refData.business_id);
+                }
+            } catch (refError) {
+                console.error("Failed to process referral credit.", refError);
+            }
+        }
+
         return { success: true, data };
     } catch (error) {
         console.error('Error adding client:', error);
@@ -86,6 +158,14 @@ export const getClientById = async (businessId) => {
 
         // Format the data to match business structure
         if (data) {
+            // Normalize gallery: support both plain URL strings and {url, title} objects
+            const rawGallery = data.gallery || [];
+            const normalizedGallery = rawGallery.map(item => {
+                if (typeof item === 'string') return item;
+                if (item && item.url) return item.url;
+                return null;
+            }).filter(Boolean);
+
             return {
                 success: true,
                 data: {
@@ -108,9 +188,14 @@ export const getClientById = async (businessId) => {
                     hero: {
                         main: data.hero_image || 'https://images.unsplash.com/photo-1497366216548-37526070297c?w=800',
                         overlay: 'linear-gradient(rgba(0,0,0,0.3), rgba(0,0,0,0.5))',
-                        gallery: []
+                        gallery: normalizedGallery  // Pass real gallery through hero too
                     },
-                    gallery: data.gallery || []
+                    gallery: normalizedGallery,  // Normalized flat array of URLs
+                    // Instagram Offer Fields
+                    instagram_url: data.instagram_url || null,
+                    ig_offer_title: data.ig_offer_title || null,
+                    ig_offer_desc: data.ig_offer_desc || null,
+                    ig_offer_validity: data.ig_offer_validity || 30
                 }
             };
         }
@@ -438,6 +523,62 @@ export const uploadImage = async (file, bucket = 'business-images') => {
     }
 };
 
+/**
+ * Downloads a remote image (e.g. a temporary OpenAI URL) and uploads it
+ * permanently to Supabase Storage.
+ * 
+ * @param {string} imageUrl - The remote URL to download and re-upload
+ * @param {string} bucket - Supabase Storage bucket name (default: 'business-images')
+ * @returns {string|null} Permanent Supabase public URL, or null on failure
+ */
+export const uploadImageFromUrl = async (imageUrl, bucket = 'business-images') => {
+    try {
+        // Fetch the image as a binary blob
+        const fetchResponse = await fetch(imageUrl);
+        if (!fetchResponse.ok) {
+            console.error('uploadImageFromUrl: Failed to fetch image from URL', imageUrl);
+            return null;
+        }
+
+        const blob = await fetchResponse.blob();
+        const contentType = blob.type || 'image/png';
+        const ext = contentType.split('/')[1]?.replace('jpeg', 'jpg') || 'jpg';
+        const fileName = `ai_${Math.random().toString(36).substring(2)}_${Date.now()}.${ext}`;
+
+        // Upload the blob to Supabase Storage
+        const { data, error } = await supabase.storage
+            .from(bucket)
+            .upload(fileName, blob, { contentType, upsert: false });
+
+        if (error) {
+            // If bucket doesn't exist, try to create it and retry once
+            if (error.message?.includes('not found') || error.statusCode === '404' || error.error === 'Bucket not found') {
+                console.log(`Bucket '${bucket}' not found. Attempting to create...`);
+                await supabase.storage.createBucket(bucket, { public: true });
+                const retry = await supabase.storage
+                    .from(bucket)
+                    .upload(fileName, blob, { contentType, upsert: false });
+                if (retry.error) {
+                    console.error('uploadImageFromUrl: Retry upload failed', retry.error);
+                    return null;
+                }
+            } else {
+                console.error('uploadImageFromUrl: Upload failed', error);
+                return null;
+            }
+        }
+
+        const { data: publicUrlData } = supabase.storage
+            .from(bucket)
+            .getPublicUrl(fileName);
+
+        return publicUrlData?.publicUrl || null;
+    } catch (err) {
+        console.error('uploadImageFromUrl: Unexpected error', err);
+        return null;
+    }
+};
+
 // ==================== QR ORDERS ====================
 
 export const addQROrder = async (orderData) => {
@@ -450,7 +591,7 @@ export const addQROrder = async (orderData) => {
                 plate_number: orderData.plate_number,
                 address: orderData.address,
                 design_info: orderData.design_info || {}, // Add design info
-                status: 'Payment Verified',
+                status: 'New',
                 price: 250
             }])
             .select();
@@ -540,5 +681,306 @@ export const getAllQROrdersByBusinessId = async (businessId) => {
     } catch (error) {
         console.error('Error fetching all QR orders by business ID:', error);
         return { success: false, error: error.message };
+    }
+};
+
+// ==================== ADMIN USERS (RBAC) ====================
+
+/**
+ * Authenticate admin user
+ * @param {string} email - Admin email
+ * @param {string} password - Admin password (plain text for dev)
+ * @returns {Object} { success, data: { id, email, full_name, role }, error }
+ */
+export const authenticateAdmin = async (email, password) => {
+    try {
+        const { data, error } = await supabase
+            .from('admin_users')
+            .select('*')
+            .eq('email', email.toLowerCase())
+            .eq('password', password)
+            .eq('is_active', true)
+            .single();
+
+        if (error) {
+            if (error.code === 'PGRST116') {
+                return { success: false, error: 'Invalid credentials' };
+            }
+            throw error;
+        }
+
+        // Update last login
+        await supabase
+            .from('admin_users')
+            .update({ last_login: new Date().toISOString() })
+            .eq('id', data.id);
+
+        return {
+            success: true,
+            data: {
+                id: data.id,
+                email: data.email,
+                full_name: data.full_name,
+                role: data.role
+            }
+        };
+    } catch (error) {
+        console.error('Error authenticating admin:', error);
+        return { success: false, error: error.message };
+    }
+};
+
+/**
+ * Get all admin users (Super Admin only)
+ * @returns {Object} { success, data, error }
+ */
+export const getAllAdminUsers = async () => {
+    try {
+        const { data, error } = await supabase
+            .from('admin_users')
+            .select('id, email, full_name, role, is_active, created_at, last_login')
+            .order('created_at', { ascending: false });
+
+        if (error) throw error;
+        return { success: true, data };
+    } catch (error) {
+        console.error('Error fetching admin users:', error);
+        return { success: false, error: error.message };
+    }
+};
+
+/**
+ * Log admin activity for audit trail
+ * @param {string} adminId - Admin user ID
+ * @param {string} action - Action performed
+ * @param {string} targetType - Type of target (client, fsr, etc.)
+ * @param {string} targetId - ID of target
+ * @param {Object} details - Additional details
+ * @returns {Object} { success, error }
+ */
+export const logAdminActivity = async (adminId, action, targetType = null, targetId = null, details = {}) => {
+    try {
+        const { error } = await supabase
+            .from('admin_activity_log')
+            .insert({
+                admin_id: adminId,
+                action,
+                target_type: targetType,
+                target_id: targetId,
+                details
+            });
+
+        if (error) throw error;
+        return { success: true };
+    } catch (error) {
+        console.error('Error logging admin activity:', error);
+        return { success: false, error: error.message };
+    }
+};
+
+// ==================== COUPONS ====================
+
+export const generateCoupon = async (couponData) => {
+    try {
+        const { data, error } = await supabase
+            .from('coupons')
+            .insert([{
+                business_id: couponData.business_id,
+                business_name: couponData.business_name,
+                code: couponData.code,
+                offer_title: couponData.offer_title,
+                description: couponData.description,
+                status: 'active',
+                source: couponData.source,
+                customer_details: couponData.customer_details || {},
+                expiry_date: couponData.expiry_date
+            }])
+            .select();
+
+        if (error) throw error;
+        return { success: true, data: data ? data[0] : null };
+    } catch (error) {
+        console.error('Error generating coupon:', error);
+        return { success: false, error: error.message };
+    }
+};
+
+export const getCouponsByBusiness = async (businessId) => {
+    try {
+        const { data, error } = await supabase
+            .from('coupons')
+            .select('*')
+            .eq('business_id', businessId)
+            .order('created_at', { ascending: false });
+
+        if (error) throw error;
+        return { success: true, data };
+    } catch (error) {
+        console.error('Error fetching coupons:', error);
+        return { success: false, error: error.message };
+    }
+};
+
+export const verifyCoupon = async (code, businessId) => {
+    try {
+        const { data, error } = await supabase
+            .from('coupons')
+            .select('*')
+            .eq('code', code)
+            .single();
+
+        if (error) throw error;
+
+        if (businessId && data.business_id !== businessId) {
+            return { success: false, error: 'Coupon belongs to another business' };
+        }
+
+        if (data.status !== 'active') {
+            return { success: false, error: `Coupon is ${data.status}` };
+        }
+
+        if (data.expiry_date && new Date(data.expiry_date) < new Date()) {
+            return { success: false, error: 'Coupon has expired' };
+        }
+
+        return { success: true, data };
+    } catch (error) {
+        console.error('Error verifying coupon:', error);
+        return { success: false, error: 'Invalid coupon code' };
+    }
+};
+
+export const claimCoupon = async (couponId) => {
+    try {
+        const { data, error } = await supabase
+            .from('coupons')
+            .update({
+                status: 'claimed',
+                claimed_at: new Date().toISOString()
+            })
+            .eq('id', couponId)
+            .select();
+
+        if (error) throw error;
+        return { success: true, data: data ? data[0] : null };
+    } catch (error) {
+        console.error('Error claiming coupon:', error);
+        return { success: false, error: error.message };
+    }
+};
+
+// ==================== CALLBACK REQUESTS ====================
+
+export const addCallbackRequest = async (data) => {
+    try {
+        const { data: result, error } = await supabase
+            .from('callback_requests')
+            .insert([{
+                business_id: data.business_id,
+                business_name: data.business_name,
+                contact_name: data.contact_name,
+                phone: data.phone,
+                message: data.message || '',
+                preferred_time: data.preferred_time || '',
+                status: 'pending',
+            }])
+            .select();
+        if (error) throw error;
+        return { success: true, data: result[0] };
+    } catch (error) {
+        console.error('Error adding callback request:', error);
+        return { success: false, error: error.message };
+    }
+};
+
+export const getAllCallbackRequests = async () => {
+    try {
+        const { data, error } = await supabase
+            .from('callback_requests')
+            .select('*')
+            .order('created_at', { ascending: false });
+        if (error) throw error;
+        return { success: true, data: data || [] };
+    } catch (error) {
+        console.error('Error fetching callback requests:', error);
+        return { success: false, data: [], error: error.message };
+    }
+};
+
+export const updateCallbackRequestStatus = async (id, status) => {
+    try {
+        const { data, error } = await supabase
+            .from('callback_requests')
+            .update({ status, updated_at: new Date().toISOString() })
+            .eq('id', id)
+            .select();
+        if (error) throw error;
+        return { success: true, data: data[0] };
+    } catch (error) {
+        console.error('Error updating callback request:', error);
+        return { success: false, error: error.message };
+    }
+};
+
+export const deleteCallbackRequest = async (id) => {
+    try {
+        const { error } = await supabase
+            .from('callback_requests')
+            .delete()
+            .eq('id', id);
+        if (error) throw error;
+        return { success: true };
+    } catch (error) {
+        console.error('Error deleting callback request:', error);
+        return { success: false, error: error.message };
+    }
+};
+// ==================== API USAGE TRACKING ====================
+
+export const logApiUsage = async (api_type, action, input_details, cost_estimate) => {
+    try {
+        const { error } = await supabase
+            .from('api_usage_logs')
+            .insert([{
+                api_type,
+                action,
+                input_details,
+                cost_estimate,
+                timestamp: new Date().toISOString()
+            }]);
+
+        if (error) {
+            // If table doesn't exist, we just fail silently in production, 
+            // but log to console so admin knows to create it.
+            if (error.code === '42P01') {
+                console.warn('API Usage table missing. Super admin must run setup SQL.');
+            } else {
+                throw error;
+            }
+        }
+        return { success: true };
+    } catch (error) {
+        console.error('Error logging API usage:', error);
+        return { success: false, error: error.message };
+    }
+};
+
+export const getAllApiLogs = async () => {
+    try {
+        const { data, error } = await supabase
+            .from('api_usage_logs')
+            .select('*')
+            .order('timestamp', { ascending: false });
+
+        if (error) {
+            if (error.code === '42P01') {
+                return { success: false, error: 'Table missing', requiresSetup: true };
+            }
+            throw error;
+        }
+        return { success: true, data: data || [] };
+    } catch (error) {
+        console.error('Error fetching API logs:', error);
+        return { success: false, data: [], error: error.message };
     }
 };

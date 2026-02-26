@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { CheckBadgeIcon, XCircleIcon, GiftIcon } from '@heroicons/react/24/solid';
+import { verifyCoupon } from '../lib/supabase';
 import Footer from '../components/common/Footer';
 
 export default function RedeemPage() {
@@ -11,48 +12,32 @@ export default function RedeemPage() {
     const [offerDetails, setOfferDetails] = useState(null);
 
     useEffect(() => {
-        // Mock verification logic
-        const verifyCode = () => {
-            setTimeout(() => {
-                if (!code) {
-                    setStatus('invalid');
-                    return;
-                }
+        // Real verification logic
+        const verifyCodeFn = async () => {
+            if (!code) {
+                setStatus('invalid');
+                return;
+            }
 
-                // Simple logic to decode the offer based on the code prefix
-                // In a real app, this would check Supabase
-                const prefix = code.split('-')[0];
+            // Verify with Supabase
+            const result = await verifyCoupon(code);
 
-                let offer = null;
-                if (prefix === 'PIZ' || prefix === 'IZZ') {
-                    offer = {
-                        business: "Pizza Corner",
-                        title: "FREE Garlic Bread",
-                        description: "Complimentary portion with any Large Pizza.",
-                        expiry: "Valid for 14 days"
-                    };
-                } else if (prefix === 'RAJ' || prefix === 'ALO') {
-                    offer = {
-                        business: "Raj's Salon",
-                        title: "20% Off Hair Spa",
-                        description: "Exclusive luxury treatment discount.",
-                        expiry: "Valid for 45 days"
-                    };
-                } else {
-                    offer = {
-                        business: "Partner Business",
-                        title: "10% Off Next Visit",
-                        description: "Thank you for your feedback.",
-                        expiry: "Valid for 30 days"
-                    };
-                }
-
-                setOfferDetails(offer);
+            if (result.success) {
+                setOfferDetails({
+                    business: result.data.business_name || "Partner Business",
+                    title: result.data.offer_title,
+                    description: result.data.description,
+                    expiry: result.data.expiry_date ? `Expires: ${new Date(result.data.expiry_date).toLocaleDateString()}` : "Valid"
+                });
                 setStatus('valid');
-            }, 1500);
+            } else {
+                console.error(result.error);
+                setStatus('invalid');
+            }
         };
 
-        verifyCode();
+        verifyCodeFn();
+
     }, [code]);
 
     return (

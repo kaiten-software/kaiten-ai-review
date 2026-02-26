@@ -20,8 +20,8 @@ export default function Footer() {
             { name: 'Admin Control', href: '/admin/login', type: 'internal' },
         ],
         company: [
-            { name: 'About Kaiten', href: 'https://kaitensoftware.com', type: 'external' },
-            { name: 'Services', href: 'https://kaitensoftware.com/services', type: 'external' },
+            { name: 'About RankBag', href: 'https://rankbag.com', type: 'external' },
+            { name: 'Services', href: 'https://rankbag.com/services', type: 'external' },
             { name: 'Contact', href: '#contact', type: 'anchor' },
             { name: 'Careers', href: '#careers', type: 'anchor' },
         ],
@@ -45,24 +45,24 @@ export default function Footer() {
                 <div className="absolute bottom-0 left-0 w-[500px] h-[500px] bg-purple-600/5 rounded-full blur-[100px] pointer-events-none"></div>
             </div>
 
-            <div className="container-custom py-16 relative z-10">
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-12">
+            <div className="container-custom py-8 sm:py-12 md:py-16 relative z-10">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-8 sm:gap-10 md:gap-12">
                     {/* Brand Section */}
                     <div className="lg:col-span-2">
-                        <Logo size="medium" variant="full" className="mb-6" isDark />
-                        <p className="text-slate-400 mb-8 max-w-sm leading-relaxed text-sm">
+                        <Logo size="medium" variant="full" className="mb-4 sm:mb-6" isDark />
+                        <p className="text-slate-400 mb-6 sm:mb-8 max-w-sm leading-relaxed text-sm">
                             Empowering businesses with AI-driven reputation management. Turn positive feedback into growth.
                         </p>
 
-                        <div className="space-y-4 mb-8">
+                        <div className="space-y-3 sm:space-y-4 mb-6 sm:mb-8">
                             <div className="flex items-start gap-3 text-slate-400">
                                 <MapPinIcon className="w-5 h-5 text-blue-500 shrink-0 mt-0.5" />
                                 <span className="text-sm">B-95 Bhan Nagar, Prince Road,<br />Jaipur, Rajasthan 302021</span>
                             </div>
                             <div className="flex items-center gap-3 text-slate-400">
                                 <GlobeAltIcon className="w-5 h-5 text-blue-500 shrink-0" />
-                                <a href="https://kaitensoftware.com" target="_blank" rel="noopener noreferrer" className="text-sm hover:text-blue-400 transition-colors">
-                                    www.kaitensoftware.com
+                                <a href="https://rankbag.com" target="_blank" rel="noopener noreferrer" className="text-sm hover:text-blue-400 transition-colors">
+                                    www.rankbag.com
                                 </a>
                             </div>
                         </div>
@@ -87,8 +87,8 @@ export default function Footer() {
                         { title: 'Legal', links: footerLinks.legal }
                     ].map((col) => (
                         <div key={col.title}>
-                            <h3 className="font-bold text-white mb-6">{col.title}</h3>
-                            <ul className="space-y-4">
+                            <h3 className="font-bold text-white mb-4 sm:mb-6">{col.title}</h3>
+                            <ul className="space-y-3 sm:space-y-4">
                                 {col.links.map((link) => (
                                     <li key={link.name}>
                                         {link.isButton ? (
@@ -127,7 +127,7 @@ export default function Footer() {
                 {/* Bottom Bar */}
                 <div className="border-t border-slate-800 mt-16 pt-8 flex flex-col md:flex-row justify-between items-center gap-4">
                     <p className="text-slate-500 text-sm">
-                        © {currentYear} Kaiten Software. All rights reserved.
+                        © {currentYear} RankBag. All rights reserved.
                     </p>
                     <div className="flex items-center gap-6">
                         <p className="text-slate-500 text-sm flex items-center gap-1.5">

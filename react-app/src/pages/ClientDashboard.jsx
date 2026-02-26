@@ -1,9 +1,11 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
+import QRCodeLib from 'qrcode';
 import { motion, AnimatePresence } from 'framer-motion';
-import { addQROrder, getQROrderByBusinessId, getAllQROrdersByBusinessId, getReviewsByBusiness, deleteReview as deleteReviewSupabase } from '../lib/supabase';
+import { addQROrder, getQROrderByBusinessId, getAllQROrdersByBusinessId, getReviewsByBusiness, deleteReview as deleteReviewSupabase, getClientById, addCallbackRequest } from '../lib/supabase';
 import {
     ChartBarIcon,
+    CalendarDaysIcon,
     QrCodeIcon,
     StarIcon,
     UserGroupIcon,
@@ -45,9 +47,14 @@ import {
     CursorArrowRaysIcon,
     ArrowDownTrayIcon,
     ShieldCheckIcon,
-    BoltIcon
+    BoltIcon,
+    TicketIcon,
+    LifebuoyIcon,
+    PaintBrushIcon
 } from '@heroicons/react/24/outline';
 import { Premium3DQRStands } from '../components/Premium3DQRStands';
+import InstagramQRManager from '../components/dashboard/InstagramQRManager';
+import CouponManager from '../components/dashboard/CouponManager';
 
 // Mock Data for Multiple Clients
 const MOCK_DB = {
@@ -57,6 +64,7 @@ const MOCK_DB = {
         address: '78 Indiranagar, Bangalore, Karnataka 560038',
         type: 'Restaurant',
         logo: '🍕',
+        email: 'hello@pizzacorner.com',
         theme: { from: 'from-orange-600', to: 'to-red-600', bg: 'bg-orange-50', accent: 'text-orange-600' },
         heroImage: 'https://images.unsplash.com/photo-1513104890138-7c749659a591?auto=format&fit=crop&w=1080&q=80',
         plan: 'Premium',
@@ -96,15 +104,20 @@ const MOCK_DB = {
             { name: "Ovenstory Pizza", area: "Vaishali Nagar", rating: 4.0, reviews: 890, sentiment: "neutral", insight: "Gaining traction with 'Buy 1 Get 1' offers.", trend: "stable" }
         ],
         products: [
-            { id: 1, name: 'Farmhouse Special Pizza', category: 'Pizza', rating: 4.9, reviews: 342, price: '$12', image: 'https://images.unsplash.com/photo-1513104890138-7c749659a591?auto=format&fit=crop&w=300&q=80', trend: 'up' },
-            { id: 2, name: 'Spicy Pepperoni', category: 'Pizza', rating: 4.8, reviews: 215, price: '$14', image: 'https://images.unsplash.com/photo-1628840042765-356cda07504e?auto=format&fit=crop&w=300&q=80', trend: 'stable' },
-            { id: 3, name: 'Creamy Alfredo Pasta', category: 'Pasta', rating: 4.5, reviews: 120, price: '$10', image: 'https://images.unsplash.com/photo-1626844131082-256783844137?auto=format&fit=crop&w=300&q=80', trend: 'down' },
-            { id: 4, name: 'Garlic Breadsticks', category: 'Sides', rating: 4.2, reviews: 89, price: '$5', image: 'https://images.unsplash.com/photo-1573140247632-f84660f67627?auto=format&fit=crop&w=300&q=80', trend: 'stable' },
+            { id: 1, name: 'Gourmet Pizza', category: 'Pizza', rating: 4.8, reviews: 342, price: '₹450', image: 'https://images.unsplash.com/photo-1513104890138-7c749659a591?w=600&h=400&fit=crop', trend: 'up' },
+            { id: 2, name: 'Handmade Pasta', category: 'Pasta', rating: 4.9, reviews: 215, price: '₹350', image: 'https://images.unsplash.com/photo-1626844131082-256783844137?w=600&h=400&fit=crop', trend: 'stable' },
+            { id: 3, name: 'Juicy Burgers', category: 'Burger', rating: 4.5, reviews: 120, price: '₹250', image: 'https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=600&h=400&fit=crop', trend: 'down' },
+            { id: 4, name: 'Signature Drinks', category: 'Beverage', rating: 4.7, reviews: 89, price: '₹150', image: 'https://images.unsplash.com/photo-1513558161293-cdaf765ed2fd?w=600&h=400&fit=crop', trend: 'stable' },
+            { id: 5, name: 'Sweet Desserts', category: 'Dessert', rating: 4.9, reviews: 310, price: '₹200', image: 'https://images.unsplash.com/photo-1488477181946-6428a0291777?w=600&h=400&fit=crop', trend: 'up' },
+            { id: 6, name: 'Fresh Wraps', category: 'Wrap', rating: 4.6, reviews: 140, price: '₹180', image: 'https://images.unsplash.com/photo-1626700051175-6818013e1d4f?w=600&h=400&fit=crop', trend: 'up' },
+            { id: 7, name: 'Green Salads', category: 'Salad', rating: 4.4, reviews: 95, price: '₹220', image: 'https://images.unsplash.com/photo-1512621776951-a57141f2eefd?w=600&h=400&fit=crop', trend: 'stable' },
+            { id: 8, name: 'Crispy Fries', category: 'Sides', rating: 4.8, reviews: 420, price: '₹120', image: 'https://images.unsplash.com/photo-1573080496219-bb080dd4f877?w=600&h=400&fit=crop', trend: 'up' }
         ],
         team: [
-            { id: 1, name: 'Mario Rossi', role: 'Head Chef', rating: 4.9, selections: 154, image: 'https://images.unsplash.com/photo-1583394838336-acd977736f90?auto=format&fit=crop&w=300&q=80', status: 'Star' },
-            { id: 2, name: 'Sarah Jenkins', role: 'Senior Server', rating: 4.8, selections: 120, image: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=300&q=80', status: 'Rising' },
-            { id: 3, name: 'David Smith', role: 'Delivery Lead', rating: 4.3, selections: 45, image: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=300&q=80', status: 'Stable' },
+            { id: 1, name: 'Chef Marco Rossi', role: 'Head Chef', rating: 5.0, selections: 154, image: 'https://images.unsplash.com/photo-1583394293214-28ded15ee548?w=400&h=400&fit=crop', status: 'Legend' },
+            { id: 2, name: 'Vikram Khanna', role: 'Sous Chef', rating: 4.8, selections: 120, image: 'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=400&h=400&fit=crop', status: 'Star' },
+            { id: 3, name: 'Sophia D\'Angelo', role: 'Pastry Chef', rating: 4.9, selections: 95, image: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=400&h=400&fit=crop', status: 'Rising' },
+            { id: 4, name: 'Rahul Verma', role: 'Pizza Chef', rating: 4.6, selections: 45, image: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=400&h=400&fit=crop', status: 'Stable' }
         ]
     },
     'rajs-salon': {
@@ -113,6 +126,7 @@ const MOCK_DB = {
         address: "45 Fashion Avenue, Style District, NY 10012",
         type: 'Salon',
         logo: '💇',
+        email: 'contact@rajssalon.com',
         theme: { from: 'from-purple-600', to: 'to-pink-600', bg: 'bg-purple-50', accent: 'text-purple-600' },
         heroImage: 'https://images.unsplash.com/photo-1560066984-12186d30b73c?auto=format&fit=crop&w=1080&q=80',
         plan: 'Premium',
@@ -134,15 +148,180 @@ const MOCK_DB = {
             { name: "Looks Salon", area: "Pink Square", rating: 4.2, reviews: 650, sentiment: "mixed", insight: "Recent staff turnover causing drop in ratings.", trend: "down" }
         ],
         products: [
-            { id: 1, name: 'Gold Facial Kit', category: 'Facial', rating: 4.9, reviews: 89, price: '$40', image: 'https://images.unsplash.com/photo-1570172619644-dfd03ed5d881?auto=format&fit=crop&w=300&q=80', trend: 'up' },
-            { id: 2, name: 'Keratin Treatment', category: 'Hair', rating: 4.7, reviews: 156, price: '$120', image: 'https://images.unsplash.com/photo-1562322140-8baeececf3df?auto=format&fit=crop&w=300&q=80', trend: 'stable' },
-            { id: 3, name: 'Bridal Makeup Package', category: 'Makeup', rating: 5.0, reviews: 42, price: '$300', image: 'https://images.unsplash.com/photo-1487412720507-e7ab37603c6f?auto=format&fit=crop&w=300&q=80', trend: 'up' },
+            { id: 1, name: 'Haircut & Styling', category: 'Hair', rating: 4.8, reviews: 142, price: '₹500', image: 'https://images.unsplash.com/photo-1599351431202-1e0f0137899a?w=600&h=400&fit=crop', trend: 'up' },
+            { id: 2, name: 'Hair Coloring', category: 'Hair', rating: 4.9, reviews: 215, price: '₹2000', image: 'https://images.unsplash.com/photo-1560869713-7d0a29430803?w=600&h=400&fit=crop', trend: 'stable' },
+            { id: 3, name: 'Hair Treatment', category: 'Hair', rating: 4.9, reviews: 180, price: '₹1500', image: 'https://images.unsplash.com/photo-1522337360788-8b13dee7a37e?w=600&h=400&fit=crop', trend: 'up' },
+            { id: 4, name: 'Beard Grooming', category: 'Men', rating: 4.7, reviews: 89, price: '₹300', image: 'https://images.unsplash.com/photo-1621605815971-fbc98d665033?w=600&h=400&fit=crop', trend: 'stable' },
+            { id: 5, name: 'Bridal Package', category: 'Bridal', rating: 5.0, reviews: 45, price: '₹5000', image: 'https://images.unsplash.com/photo-1487412947147-5cebf100ffc2?w=600&h=400&fit=crop', trend: 'up' }
         ],
         team: [
-            { id: 1, name: 'Raj Koothrappali', role: 'Lead Stylist', rating: 5.0, selections: 230, image: 'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?auto=format&fit=crop&w=300&q=80', status: 'Legend' },
-            { id: 2, name: 'Priya Sharma', role: 'Makeup Artist', rating: 4.8, selections: 180, image: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=300&q=80', status: 'Star' },
-            { id: 3, name: 'Ken Adams', role: 'Colorist', rating: 4.6, selections: 95, image: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=300&q=80', status: 'Rising' },
+            { id: 1, name: 'Raj Kumar', role: 'Master Stylist', rating: 5.0, selections: 230, image: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400&h=400&fit=crop', status: 'Legend' },
+            { id: 2, name: 'Priya Sharma', role: 'Senior Stylist', rating: 4.8, selections: 180, image: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=400&h=400&fit=crop', status: 'Star' },
+            { id: 3, name: 'Amit Patel', role: 'Barber', rating: 4.6, selections: 95, image: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=400&h=400&fit=crop', status: 'Rising' },
+            { id: 4, name: 'Neha Singh', role: 'Junior Stylist', rating: 4.7, selections: 65, image: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=400&h=400&fit=crop', status: 'Rising' }
         ]
+    },
+    'sharma-electronics': {
+        id: 'sharma-electronics',
+        name: 'Sharma Electronics',
+        address: '12 Tech Park, MG Road, Bangalore',
+        type: 'Electronics',
+        logo: '⚡',
+        email: 'support@sharmaelectronics.com',
+        theme: { from: 'from-blue-600', to: 'to-cyan-600', bg: 'bg-blue-50', accent: 'text-blue-600' },
+        heroImage: 'https://images.unsplash.com/photo-1550009158-9ebf69173e03?auto=format&fit=crop&w=1080&q=80',
+        plan: 'Premium',
+        status: 'Active',
+        subscriptionExpiry: new Date(Date.now() + 2 * 24 * 60 * 60 * 1000).toISOString(), // 2 days
+        stats: {
+            qrScans: 2105,
+            reviewsGenerated: 1850,
+            googlePosts: 1600,
+            avgRating: 4.6
+        },
+        reviews: [
+            { id: 301, customer: "Vikram R.", rating: 5, text: "Got an amazing deal on the new iPhone!", date: "2026-02-18", posted: true, source: "Google", contact: "vikram@example.com", membership: "Gold" },
+            { id: 302, customer: "Anita D.", rating: 4, text: "Good variety but billing took time.", date: "2026-02-15", posted: true, source: "Google", contact: "anita@example.com", membership: null },
+            { id: 303, customer: "Sanjay K.", rating: 5, text: "Best place for laptops in the city.", date: "2026-02-10", posted: true, source: "Google", contact: "sanjay@example.com", membership: "Silver" },
+        ],
+        competitors: [
+            { name: "Croma", area: "Indiranagar", rating: 4.4, reviews: 3500, sentiment: "positive", insight: "Strong online presence and fast delivery.", trend: "up" },
+            { name: "Reliance Digital", area: "MG Road", rating: 4.2, reviews: 4100, sentiment: "mixed", insight: "Aggressive pricing but lower service quality.", trend: "stable" },
+            { name: "Imagine Store", area: "UB City", rating: 4.8, reviews: 1200, sentiment: "positive", insight: "Premium Apple experience, high loyalty.", trend: "up" }
+        ],
+        products: [
+            { id: 1, name: 'Sony 55" 4K TV', category: 'TV', rating: 4.8, reviews: 120, price: '₹65,000', image: 'https://images.unsplash.com/photo-1593359677879-a4bb92f829d1?w=800', trend: 'up' },
+            { id: 2, name: 'Dell XPS 13', category: 'Laptop', rating: 4.9, reviews: 85, price: '₹1,20,000', image: 'https://images.unsplash.com/photo-1496181133206-80ce9b88a853?w=800&q=80', trend: 'stable' },
+            { id: 3, name: 'AirPods Pro', category: 'Audio', rating: 4.7, reviews: 310, price: '₹24,900', image: 'https://images.unsplash.com/photo-1504274066651-8d31a536b300?w=800&q=80', trend: 'up' },
+        ],
+        team: [
+            { id: 1, name: 'Rahul Sharma', role: 'Store Manager', rating: 4.9, selections: 450, image: 'https://randomuser.me/api/portraits/men/32.jpg', status: 'Legend' },
+            { id: 2, name: 'Priya Verma', role: 'Sales Lead', rating: 4.7, selections: 320, image: 'https://randomuser.me/api/portraits/women/44.jpg', status: 'Star' },
+        ]
+    }
+};
+
+const THEMES = {
+    default: {
+        id: 'default',
+        name: 'Obsidian Executive',
+        sidebar: 'bg-slate-950 border-r border-slate-800',
+        sidebarGradient: 'from-slate-900 via-slate-950 to-black',
+        sidebarText: 'text-white',
+        sidebarMuted: 'text-slate-400',
+        sidebarHoverText: 'hover:text-white',
+        sidebarHoverBg: 'hover:bg-white/5',
+        sidebarBorder: 'border-slate-800',
+        logoBg: 'bg-white/10 border-white/10 text-white',
+        pageBg: 'bg-gradient-to-br from-slate-50 via-gray-50 to-slate-100',
+        pageText: 'text-slate-900',
+        pageTextMuted: 'text-slate-500',
+        activeBg: 'bg-white/10 backdrop-blur-sm',
+        activeText: 'text-white',
+        activeBorder: 'border-white/10',
+        iconColor: 'text-blue-400',
+        indicator: 'bg-blue-500 shadow-[0_0_15px_rgba(59,130,246,0.5)]',
+        button: 'bg-slate-900 hover:bg-black text-white shadow-xl shadow-slate-900/20',
+        accent: 'text-slate-800',
+        lightAccent: 'bg-slate-100',
+        borderColor: 'border-slate-200'
+    },
+    aurora: {
+        id: 'aurora',
+        name: 'Aurora Borealis',
+        sidebar: 'bg-cyan-950 border-r border-cyan-900',
+        sidebarGradient: 'from-cyan-900 via-teal-900 to-emerald-950',
+        sidebarText: 'text-white',
+        sidebarMuted: 'text-cyan-200/70',
+        sidebarHoverText: 'hover:text-white',
+        sidebarHoverBg: 'hover:bg-white/10',
+        sidebarBorder: 'border-cyan-900',
+        logoBg: 'bg-white/10 border-white/10 text-white',
+        pageBg: 'bg-[conic-gradient(at_top_left,_var(--tw-gradient-stops))] from-slate-50 via-cyan-50 to-emerald-50',
+        pageText: 'text-slate-900',
+        pageTextMuted: 'text-slate-500',
+        activeBg: 'bg-gradient-to-r from-cyan-400/10 to-emerald-400/10 backdrop-blur-md',
+        activeText: 'text-cyan-300',
+        activeBorder: 'border-cyan-500/20',
+        iconColor: 'text-cyan-300',
+        indicator: 'bg-cyan-400 shadow-[0_0_15px_rgba(34,211,238,0.6)]',
+        button: 'bg-gradient-to-r from-cyan-600 to-emerald-600 hover:from-cyan-500 hover:to-emerald-500 text-white shadow-xl shadow-cyan-500/20',
+        accent: 'text-cyan-800',
+        lightAccent: 'bg-cyan-50',
+        borderColor: 'border-cyan-100'
+    },
+    sunset: {
+        id: 'sunset',
+        name: 'Golden Hour',
+        sidebar: 'bg-orange-950 border-r border-orange-900',
+        sidebarGradient: 'from-orange-900 via-red-950 to-rose-950',
+        sidebarText: 'text-white',
+        sidebarMuted: 'text-orange-200/70',
+        sidebarHoverText: 'hover:text-white',
+        sidebarHoverBg: 'hover:bg-white/10',
+        sidebarBorder: 'border-orange-900',
+        logoBg: 'bg-white/10 border-white/10 text-white',
+        pageBg: 'bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-amber-50 via-orange-50 to-rose-50',
+        pageText: 'text-slate-900',
+        pageTextMuted: 'text-slate-500',
+        activeBg: 'bg-gradient-to-r from-orange-500/10 to-red-500/10',
+        activeText: 'text-orange-200',
+        activeBorder: 'border-orange-500/20',
+        iconColor: 'text-orange-200',
+        indicator: 'bg-orange-500 shadow-[0_0_15px_rgba(249,115,22,0.6)]',
+        button: 'bg-gradient-to-r from-orange-600 to-red-600 hover:shadow-orange-500/20 text-white shadow-xl',
+        accent: 'text-orange-800',
+        lightAccent: 'bg-orange-50',
+        borderColor: 'border-orange-100'
+    },
+    lavender: {
+        id: 'lavender',
+        name: 'Royal Aether',
+        sidebar: 'bg-indigo-950 border-r border-indigo-900',
+        sidebarGradient: 'from-indigo-900 via-purple-900 to-fuchsia-950',
+        sidebarText: 'text-white',
+        sidebarMuted: 'text-indigo-200/70',
+        sidebarHoverText: 'hover:text-white',
+        sidebarHoverBg: 'hover:bg-white/10',
+        sidebarBorder: 'border-indigo-900',
+        logoBg: 'bg-white/10 border-white/10 text-white',
+        pageBg: 'bg-[conic-gradient(at_bottom_left,_var(--tw-gradient-stops))] from-indigo-50 via-purple-50 to-pink-50',
+        pageText: 'text-slate-900',
+        pageTextMuted: 'text-slate-500',
+        activeBg: 'bg-gradient-to-r from-indigo-500/10 to-purple-500/10',
+        activeText: 'text-indigo-200',
+        activeBorder: 'border-indigo-500/20',
+        iconColor: 'text-indigo-300',
+        indicator: 'bg-indigo-500 shadow-[0_0_15px_rgba(99,102,241,0.6)]',
+        button: 'bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-xl shadow-indigo-500/20',
+        accent: 'text-indigo-800',
+        lightAccent: 'bg-indigo-50',
+        borderColor: 'border-indigo-100'
+    },
+
+    platinum: {
+        id: 'platinum',
+        name: 'Premium Light',
+        sidebar: 'bg-white border-r border-slate-200',
+        sidebarGradient: 'from-white via-slate-50 to-slate-100',
+        sidebarText: 'text-slate-900',
+        sidebarMuted: 'text-slate-500',
+        sidebarHoverText: 'hover:text-slate-900',
+        sidebarHoverBg: 'hover:bg-slate-100',
+        sidebarBorder: 'border-slate-200',
+        logoBg: 'bg-slate-100 border-slate-200 text-slate-900',
+        pageBg: 'bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-white via-slate-50 to-gray-100',
+        pageText: 'text-slate-900',
+        pageTextMuted: 'text-slate-500',
+        activeBg: 'bg-slate-100',
+        activeText: 'text-slate-900',
+        activeBorder: 'border-slate-300',
+        iconColor: 'text-slate-700',
+        indicator: 'bg-slate-900 shadow-[0_0_15px_rgba(15,23,42,0.3)]',
+        button: 'bg-slate-900 text-white hover:bg-slate-800 shadow-xl shadow-slate-900/10',
+        accent: 'text-slate-900',
+        lightAccent: 'bg-slate-100',
+        borderColor: 'border-slate-200'
     }
 };
 
@@ -150,12 +329,176 @@ export default function ClientDashboard() {
     const navigate = useNavigate();
     const [activeTab, setActiveTab] = useState('dashboard');
     const [businessData, setBusinessData] = useState(null);
+    const [productCategory, setProductCategory] = useState('All');
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
     const [qrLoading, setQrLoading] = useState(true);
     const [plateAddress, setPlateAddress] = useState('');
+    const [plateQuantity, setPlateQuantity] = useState(1);
+    const [upiReference, setUpiReference] = useState('');
     const [plateOrderStatus, setPlateOrderStatus] = useState('idle'); // idle, processing, success
+    const [showPaymentPopup, setShowPaymentPopup] = useState(false);
     const [ordersList, setOrdersList] = useState([]);
     const [selectedTrackingOrder, setSelectedTrackingOrder] = useState(null);
+    const [currentTheme, setCurrentTheme] = useState('default');
+    const [showCallModal, setShowCallModal] = useState(false);
+    const [openFaq, setOpenFaq] = useState(null);
+    const [showCallbackModal, setShowCallbackModal] = useState(false);
+    const [callbackForm, setCallbackForm] = useState({ contact_name: '', phone: '', preferred_time: '', message: '' });
+    const [callbackSubmitting, setCallbackSubmitting] = useState(false);
+    const [callbackSuccess, setCallbackSuccess] = useState(false);
+    const qrStandRef = useRef(null);
+
+    const handleDownloadQRStand = async () => {
+        try {
+            // Design configs matching Premium3DQRStands
+            const designConfigs = [
+                { topColor1: '#1e40af', topColor2: '#60a5fa', bottomColor1: '#1e293b', bottomColor2: '#334155', accent: '#3b82f6', bgColor: '#dbeafe', ctaText: "Love Our Food?" },
+                { topColor1: '#047857', topColor2: '#34d399', bottomColor1: '#064e3b', bottomColor2: '#065f46', accent: '#10b981', bgColor: '#d1fae5', ctaText: "Enjoyed Your Meal?" },
+                { topColor1: '#7c3aed', topColor2: '#c084fc', bottomColor1: '#581c87', bottomColor2: '#6b21a8', accent: '#a855f7', bgColor: '#f3e8ff', ctaText: "Rate Your Experience" },
+                { topColor1: '#dc2626', topColor2: '#fb923c', bottomColor1: '#7c2d12', bottomColor2: '#9a3412', accent: '#f97316', bgColor: '#fed7aa', ctaText: "Share Your Love!" },
+                { topColor1: '#0891b2', topColor2: '#22d3ee', bottomColor1: '#164e63', bottomColor2: '#155e75', accent: '#06b6d4', bgColor: '#cffafe', ctaText: "Tell Us Your Thoughts" },
+            ];
+            const cfg = designConfigs[activeDesign] || designConfigs[0];
+
+            // Canvas dimensions (2x for quality)
+            const W = 400, H = 680;
+            const canvas = document.createElement('canvas');
+            canvas.width = W;
+            canvas.height = H;
+            const ctx = canvas.getContext('2d');
+
+            // --- BG ---
+            const bgGrad = ctx.createLinearGradient(0, 0, W, H);
+            bgGrad.addColorStop(0, cfg.bgColor);
+            bgGrad.addColorStop(1, cfg.bgColor + 'aa');
+            ctx.fillStyle = bgGrad;
+            ctx.fillRect(0, 0, W, H);
+
+            // --- Card dimensions ---
+            const cardX = 60, cardY = 40, cardW = 280, cardR = 20;
+            const topH = 110, qrSectionH = 240, bottomH = 70;
+            const cardH = topH + qrSectionH + bottomH;
+
+            // --- Card shadow ---
+            ctx.save();
+            ctx.shadowColor = 'rgba(0,0,0,0.15)';
+            ctx.shadowBlur = 30;
+            ctx.shadowOffsetY = 10;
+            ctx.fillStyle = '#ffffff';
+            ctx.beginPath();
+            ctx.roundRect(cardX, cardY, cardW, cardH, cardR);
+            ctx.fill();
+            ctx.restore();
+
+            // --- TOP SECTION gradient ---
+            const topGrad = ctx.createLinearGradient(0, cardY, 0, cardY + topH);
+            topGrad.addColorStop(0, cfg.topColor1);
+            topGrad.addColorStop(1, cfg.topColor2);
+            ctx.fillStyle = topGrad;
+            ctx.beginPath();
+            ctx.roundRect(cardX, cardY, cardW, topH, [cardR, cardR, 0, 0]);
+            ctx.fill();
+
+            // --- Business emoji ---
+            ctx.font = '32px sans-serif';
+            ctx.textAlign = 'center';
+            ctx.fillText(businessData.logo || '🏪', cardX + cardW / 2, cardY + 42);
+
+            // --- Business name ---
+            ctx.fillStyle = '#ffffff';
+            ctx.font = 'bold 18px system-ui, sans-serif';
+            ctx.textAlign = 'center';
+            ctx.fillText(businessData.name || 'Business', cardX + cardW / 2, cardY + 72);
+
+            // --- Tagline pill ---
+            ctx.fillStyle = 'rgba(255,255,255,0.25)';
+            const pillW = 110, pillH = 20, pillX = cardX + (cardW - pillW) / 2, pillY = cardY + 80;
+            ctx.beginPath();
+            ctx.roundRect(pillX, pillY, pillW, pillH, 10);
+            ctx.fill();
+            ctx.fillStyle = '#ffffff';
+            ctx.font = '10px system-ui, sans-serif';
+            ctx.fillText('⭐ Premium Dining', cardX + cardW / 2, pillY + 14);
+
+            // --- WHITE MIDDLE SECTION ---
+            ctx.fillStyle = '#ffffff';
+            ctx.fillRect(cardX, cardY + topH, cardW, qrSectionH);
+
+            // CTA text
+            ctx.fillStyle = '#0f172a';
+            ctx.font = 'bold 16px system-ui, sans-serif';
+            ctx.textAlign = 'center';
+            ctx.fillText(cfg.ctaText, cardX + cardW / 2, cardY + topH + 28);
+
+            ctx.fillStyle = '#64748b';
+            ctx.font = '11px system-ui, sans-serif';
+            ctx.fillText('Scan the QR code below', cardX + cardW / 2, cardY + topH + 46);
+
+            // --- QR CODE ---
+            const qrCanvas = document.createElement('canvas');
+            const qrSize = 140;
+            await QRCodeLib.toCanvas(qrCanvas, publicPageUrl, {
+                width: qrSize,
+                margin: 1,
+                color: { dark: cfg.accent, light: '#ffffff' }
+            });
+
+            // QR border box
+            const qrX = cardX + (cardW - qrSize - 12) / 2;
+            const qrY = cardY + topH + 56;
+            ctx.fillStyle = '#ffffff';
+            ctx.strokeStyle = cfg.accent;
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.roundRect(qrX - 4, qrY - 4, qrSize + 20, qrSize + 20, 10);
+            ctx.fill();
+            ctx.stroke();
+            ctx.drawImage(qrCanvas, qrX + 4, qrY + 4, qrSize, qrSize);
+
+            // --- Scan/Rate/Share icons ---
+            const iconY = cardY + topH + qrSectionH - 28;
+            ctx.font = '12px sans-serif';
+            ctx.textAlign = 'center';
+            ctx.fillStyle = '#475569';
+            ctx.fillText('📱 Scan', cardX + cardW * 0.25, iconY + 14);
+            ctx.fillText('⭐ Rate', cardX + cardW * 0.5, iconY + 14);
+            ctx.fillText('❤️ Share', cardX + cardW * 0.75, iconY + 14);
+
+            // --- BOTTOM SECTION ---
+            const botY = cardY + topH + qrSectionH;
+            const botGrad = ctx.createLinearGradient(0, botY, 0, botY + bottomH);
+            botGrad.addColorStop(0, cfg.bottomColor1);
+            botGrad.addColorStop(1, cfg.bottomColor2);
+            ctx.fillStyle = botGrad;
+            ctx.beginPath();
+            ctx.roundRect(cardX, botY, cardW, bottomH, [0, 0, cardR, cardR]);
+            ctx.fill();
+
+            ctx.fillStyle = '#FDE68A';
+            ctx.font = 'bold 15px system-ui, sans-serif';
+            ctx.textAlign = 'center';
+            ctx.fillText('✦ RankBag ✦', cardX + cardW / 2, botY + 22);
+
+            ctx.fillStyle = 'rgba(255,255,255,0.9)';
+            ctx.font = 'bold 9px system-ui, sans-serif';
+            ctx.letterSpacing = '0.25em';
+            ctx.fillText('AI REVIEW', cardX + cardW / 2, botY + 38);
+
+            ctx.fillStyle = 'rgba(255,255,255,0.6)';
+            ctx.font = '8px system-ui, sans-serif';
+            ctx.fillText('Powered by Kaiten Software', cardX + cardW / 2, botY + 54);
+
+            // --- Download ---
+            const link = document.createElement('a');
+            link.download = `RankBag-Standee-${businessData.name || 'QR'}.png`;
+            link.href = canvas.toDataURL('image/png', 1.0);
+            link.click();
+
+        } catch (error) {
+            console.error('Error generating QR standee: ', error);
+            alert('Failed to generate the standee. Please try again.');
+        }
+    };
 
     // Fetch all orders
     useEffect(() => {
@@ -279,33 +622,91 @@ export default function ClientDashboard() {
         }
 
         const loadData = async () => {
-            const mockData = MOCK_DB[clientId] || MOCK_DB['pizza-corner'];
+            // Only use MOCK_DB for known demo businesses — never fall back to pizza-corner for real clients
+            const mockData = MOCK_DB[clientId] ? { ...MOCK_DB[clientId] } : {
+                id: clientId,
+                name: '',
+                address: '',
+                type: 'Business',
+                logo: '🏢',
+                email: '',
+                theme: { from: 'from-slate-600', to: 'to-slate-800', bg: 'bg-slate-50', accent: 'text-slate-600' },
+                heroImage: 'https://images.unsplash.com/photo-1497366216548-37526070297c?auto=format&fit=crop&w=1080&q=80',
+                plan: 'Premium',
+                status: 'Active',
+                stats: { qrScans: 0, reviewsGenerated: 0, googlePosts: 0, avgRating: 0 },
+                reviews: [],
+                competitors: [],
+                products: [],
+                team: []
+            };
             let data = { ...mockData };
 
-            // Load real client data from Supabase if available
+            // Load real client data from Supabase
             try {
                 const { success, data: clientData } = await getClientById(clientId);
                 if (success && clientData) {
                     console.log("Loaded real client data:", clientData);
-                    // Merge real data over mock data
+
+                    // Build products from services if services are objects with name/price/image
+                    let realProducts = data.products;
+                    if (clientData.services && clientData.services.length > 0) {
+                        const serviceObjects = clientData.services.filter(s => typeof s === 'object' && s !== null && s.name);
+                        if (serviceObjects.length > 0) {
+                            realProducts = serviceObjects.map((s, i) => ({
+                                id: i + 1,
+                                name: s.name,
+                                category: s.category || clientData.type || 'Service',
+                                rating: 0,
+                                reviews: 0,
+                                price: s.price || '',
+                                image: s.image || 'https://images.unsplash.com/photo-1556742049-0cfed4f6a45d?w=600&h=400&fit=crop',
+                                trend: 'stable'
+                            }));
+                        }
+                    }
+
+                    // Build team from staff if available
+                    let realTeam = data.team;
+                    if (clientData.staff && clientData.staff.length > 0) {
+                        const staffObjects = clientData.staff.filter(s => typeof s === 'object' && s !== null && s.name);
+                        if (staffObjects.length > 0) {
+                            realTeam = staffObjects.map((s, i) => ({
+                                id: i + 1,
+                                name: s.name,
+                                role: s.role || 'Team Member',
+                                rating: 0,
+                                selections: 0,
+                                image: s.image || `https://ui-avatars.com/api/?name=${encodeURIComponent(s.name)}&background=random`,
+                                status: 'Active'
+                            }));
+                        }
+                    }
+
                     data = {
                         ...data,
                         id: clientData.id,
                         name: clientData.name,
-                        address: clientData.address, // Sync address
+                        address: clientData.address,
                         logo: clientData.logo,
-                        status: 'Active', // Default status if not in DB
-                        // Keep other mock fields if they are missing active data (like theme, etc.)
-                        // Add other fields as needed
+                        status: 'Active',
+                        products: realProducts,
+                        team: realTeam,
+                        instagram_url: clientData.instagram_url,
+                        ig_offer_title: clientData.ig_offer_title,
+                        ig_offer_desc: clientData.ig_offer_desc,
+                        ig_offer_validity: clientData.ig_offer_validity,
                     };
                 }
             } catch (err) {
                 console.error("Supabase client load error:", err);
             }
 
-            // Load reviews from Supabase
+            // Load ONLY real reviews from Supabase — never mix mock reviews for real businesses
             try {
                 const { success, data: supabaseReviews } = await getReviewsByBusiness(clientId);
+                const isRealBusiness = !MOCK_DB[clientId]; // true if not a demo business
+
                 if (success && supabaseReviews.length > 0) {
                     const formattedReviews = supabaseReviews.map(r => ({
                         id: r.id,
@@ -320,11 +721,12 @@ export default function ClientDashboard() {
                         businessId: r.business_id
                     }));
 
-                    // Combine Supabase reviews with Mock data (Supabase reviews first)
-                    // Note: In a real app, you might want to replace mock data entirely
-                    data.reviews = [...formattedReviews, ...data.reviews];
+                    // For real businesses: only show real reviews
+                    // For demo businesses: merge with mock reviews
+                    data.reviews = isRealBusiness
+                        ? formattedReviews
+                        : [...formattedReviews, ...data.reviews];
 
-                    // Update stats based on Supabase Data + Mock Data
                     const totalReviews = data.reviews.length;
                     const totalRating = data.reviews.reduce((sum, r) => sum + r.rating, 0);
                     const avgRating = totalReviews > 0 ? (totalRating / totalReviews).toFixed(1) : data.stats.avgRating;
@@ -332,8 +734,12 @@ export default function ClientDashboard() {
                     data.stats = {
                         ...data.stats,
                         reviewsGenerated: totalReviews,
-                        avgRating: avgRating
+                        avgRating: parseFloat(avgRating)
                     };
+                } else if (isRealBusiness) {
+                    // Real business with no reviews yet — show empty state, no mock data
+                    data.reviews = [];
+                    data.stats = { ...data.stats, reviewsGenerated: 0, avgRating: 0 };
                 }
             } catch (err) {
                 console.error("Supabase load error:", err);
@@ -378,7 +784,7 @@ export default function ClientDashboard() {
 
     const theme = businessData.theme;
     // Generate QR URL based on current domain (for demo purposes using window.location.origin)
-    const publicPageUrl = `${window.location.origin}/business/${businessData.id}`;
+    const publicPageUrl = `${window.location.origin}/business/${businessData.id}/review`;
     const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${encodeURIComponent(publicPageUrl)}&color=${theme.accent.replace('text-', '').replace('-600', '')}`;
 
     return (
@@ -392,8 +798,8 @@ export default function ClientDashboard() {
             )}
 
             {/* Sidebar */}
-            {/* Premium Sidebar - Corporate Style */}
-            <aside className={`fixed inset-y-0 left-0 z-50 w-72 bg-[#0F172A] text-white flex flex-col flex-shrink-0 transition-transform duration-300 shadow-xl md:relative md:translate-x-0 ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full'}`}>
+            {/* Premium Sidebar - Dynamic Theme */}
+            <aside className={`fixed inset-y-0 left-0 z-50 w-72 ${THEMES[currentTheme].sidebar} ${THEMES[currentTheme].sidebarText} flex flex-col flex-shrink-0 transition-transform duration-300 shadow-xl md:relative md:translate-x-0 ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full'}`}>
                 {/* Mobile Close Button */}
                 <button
                     onClick={() => setIsMobileMenuOpen(false)}
@@ -401,71 +807,72 @@ export default function ClientDashboard() {
                 >
                     <XMarkIcon className="w-6 h-6" />
                 </button>
-                {/* Clean Gradient - Deep Corporate Blue */}
-                <div className="absolute inset-0 z-0 bg-gradient-to-b from-[#0F172A] to-[#111827]"></div>
+                {/* Clean Gradient - Dynamic */}
+                <div className={`absolute inset-0 z-0 bg-gradient-to-b ${THEMES[currentTheme].sidebarGradient}`}></div>
 
                 {/* Content Layer */}
-                <div className="relative z-10 flex-1 flex flex-col px-6 py-6">
-                    <div className="flex items-center gap-4 mb-10">
-                        <div className="w-10 h-10 rounded-lg bg-blue-600 flex items-center justify-center text-xl shadow-lg shadow-blue-900/20 shrink-0 text-white">
+                <div className="relative z-10 flex-1 flex flex-col px-6 py-6 min-h-0 overflow-hidden">
+                    <div className="flex items-center gap-4 mb-10 shrink-0">
+                        <div className={`w-10 h-10 rounded-lg ${THEMES[currentTheme].logoBg} backdrop-blur-sm flex items-center justify-center text-xl shadow-lg border shrink-0`}>
                             {businessData.logo}
                         </div>
                         <div className="overflow-hidden">
-                            <h2 className="text-base font-bold leading-tight text-white truncate">{businessData.name}</h2>
-                            <span className="text-[10px] uppercase tracking-wider font-semibold text-blue-400 mt-0.5 inline-block">
+                            <h2 className={`text-base font-bold leading-tight truncate ${THEMES[currentTheme].sidebarText}`}>{businessData.name}</h2>
+                            <span className="text-[10px] uppercase tracking-wider font-semibold opacity-70 mt-0.5 inline-block">
                                 {businessData.plan} Account
                             </span>
                         </div>
                     </div>
 
-                    <nav className="space-y-1.5 flex-1">
-                        {[
-                            { id: 'dashboard', label: 'Dashboard', icon: HomeIcon },
-                            { id: 'reviews', label: 'Reviews', icon: StarIcon },
-                            { id: 'products', label: 'Products', icon: ShoppingBagIcon },
-                            { id: 'team', label: 'Team', icon: UserGroupIcon },
+                    <div className="flex-1 flex flex-col overflow-y-auto min-h-0 -mx-2 px-2 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:'none'] [scrollbar-width:'none'] space-y-1.5">
+                        <nav className="space-y-1.5">
+                            {[
+                                { id: 'dashboard', label: 'Dashboard', icon: HomeIcon },
+                                { id: 'reviews', label: 'Reviews', icon: StarIcon },
+                                { id: 'products', label: 'Products', icon: ShoppingBagIcon },
+                                { id: 'team', label: 'Team', icon: UserGroupIcon },
 
-                            { id: 'qr', label: 'QR Collection', icon: QrCodeIcon },
-                            { id: 'qr-plate', label: 'Order QR Stand', icon: CubeIcon },
-                            { id: 'tracking', label: 'Track Shipment', icon: TruckIcon },
-                            { id: 'analytics', label: 'Analytics', icon: ChartPieIcon },
-                            { id: 'competitors', label: 'Competitor Spy', icon: EyeIcon },
-                            { id: 'profile', label: 'Settings', icon: UserIcon },
-                        ].map((item) => (
+                                { id: 'qr-plate', label: 'Order QR Stand', icon: CubeIcon },
+                                { id: 'tracking', label: 'Track Shipment', icon: TruckIcon },
+                                { id: 'coupons', label: 'Coupon Verification', icon: TicketIcon },
+                                { id: 'support', label: 'Help Center', icon: LifebuoyIcon },
+                                { id: 'profile', label: 'Settings', icon: Cog6ToothIcon },
+                            ].map((item) => (
+                                <button
+                                    key={item.id}
+                                    onClick={() => {
+                                        setActiveTab(item.id);
+                                        setIsMobileMenuOpen(false);
+                                    }}
+                                    className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg font-medium transition-all duration-200 group ${activeTab === item.id
+                                        ? `${THEMES[currentTheme].activeBg} ${THEMES[currentTheme].activeText} border ${THEMES[currentTheme].activeBorder}`
+                                        : `${THEMES[currentTheme].sidebarMuted} ${THEMES[currentTheme].sidebarHoverText} ${THEMES[currentTheme].sidebarHoverBg}`
+                                        }`}
+                                >
+                                    <item.icon className={`w-5 h-5 ${activeTab === item.id ? THEMES[currentTheme].iconColor : `${THEMES[currentTheme].sidebarMuted} group-hover:text-current`}`} />
+                                    <span className="text-sm">{item.label}</span>
+                                    {activeTab === item.id && (
+                                        <div className={`ml-auto w-1.5 h-1.5 rounded-full ${THEMES[currentTheme].indicator}`}></div>
+                                    )}
+                                </button>
+                            ))}
+                        </nav>
+
+                        <div className={`mt-auto pt-6 border-t ${THEMES[currentTheme].sidebarBorder}`}>
                             <button
-                                key={item.id}
-                                onClick={() => {
-                                    setActiveTab(item.id);
-                                    setIsMobileMenuOpen(false);
-                                }}
-                                className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg font-medium transition-all duration-200 group ${activeTab === item.id
-                                    ? 'bg-blue-600/10 text-blue-400 border border-blue-600/20'
-                                    : 'text-slate-400 hover:text-slate-100 hover:bg-white/5'
-                                    }`}
+                                onClick={handleLogout}
+                                className={`flex items-center gap-3 font-medium transition-colors w-full px-3 py-2.5 rounded-lg group ${THEMES[currentTheme].sidebarMuted} ${THEMES[currentTheme].sidebarHoverText} ${THEMES[currentTheme].sidebarHoverBg}`}
                             >
-                                <item.icon className={`w-5 h-5 ${activeTab === item.id ? 'text-blue-400' : 'text-slate-500 group-hover:text-slate-300'}`} />
-                                <span className="text-sm">{item.label}</span>
-                                {activeTab === item.id && (
-                                    <div className="ml-auto w-1.5 h-1.5 rounded-full bg-blue-400 shadow-[0_0_8px_rgba(96,165,250,0.6)]"></div>
-                                )}
+                                <ArrowRightOnRectangleIcon className="w-5 h-5 group-hover:text-red-400 transition-colors" />
+                                <span className="text-sm">Sign Out</span>
                             </button>
-                        ))}
-                    </nav>
-
-                    <div className="mt-auto pt-6 border-t border-slate-800/50">
-                        <button
-                            onClick={handleLogout}
-                            className="flex items-center gap-3 text-slate-400 hover:text-white font-medium transition-colors w-full px-3 py-2.5 rounded-lg hover:bg-white/5 group"
-                        >
-                            <ArrowRightOnRectangleIcon className="w-5 h-5 group-hover:text-red-400 transition-colors" />
-                            <span className="text-sm">Sign Out</span>
-                        </button>
+                        </div>
                     </div>
                 </div>
             </aside>
 
             {/* Main Content */}
-            <main className="flex-1 flex flex-col relative overflow-hidden bg-slate-50">
+            <main className={`flex-1 flex flex-col relative overflow-hidden transition-colors duration-500 ${THEMES[currentTheme].pageBg}`}>
                 <div className="flex-1 overflow-y-auto p-6 md:p-8 scroll-smooth">
                     {/* Header */}
                     <header className="flex flex-col md:flex-row justify-between items-start md:items-center mb-10 gap-4">
@@ -478,31 +885,36 @@ export default function ClientDashboard() {
                                 <Bars3Icon className="w-6 h-6" />
                             </button>
                             <div>
-                                <h1 className="text-3xl font-bold text-slate-900 tracking-tight">
+                                <h1 className={`text-3xl font-bold tracking-tight ${THEMES[currentTheme].pageText}`}>
                                     {activeTab === 'dashboard' ? 'Overview' :
                                         activeTab === 'reviews' ? 'Review Management' :
                                             activeTab === 'products' ? 'Product Portfolio' :
                                                 activeTab === 'team' ? 'Team Performance' :
-                                                    activeTab === 'team' ? 'Team Performance' :
-                                                        activeTab === 'qr' ? 'QR Code Assets' :
-                                                            activeTab === 'qr-plate' ? 'Get Premium QR Stand' :
-                                                                activeTab === 'tracking' ? 'Shipment Tracking' :
-                                                                    activeTab === 'analytics' ? 'Analytics & Insights' :
-                                                                        'Business Settings'}
+                                                    activeTab === 'qr' ? 'QR Code Assets' :
+                                                        activeTab === 'qr-plate' ? 'Get Premium QR Stand' :
+                                                            activeTab === 'tracking' ? 'Shipment Tracking' :
+                                                                activeTab === 'analytics' ? 'Analytics & Insights' :
+                                                                    activeTab === 'competitors' ? 'Competitor Spy' :
+                                                                        activeTab === 'support' ? 'Help Center' :
+                                                                            'Business Settings'}
                                 </h1>
-                                <p className="text-slate-500 mt-1">
+                                <p className={`mt-1 ${THEMES[currentTheme].pageTextMuted}`}>
                                     {activeTab === 'dashboard' ? `Welcome back to ${businessData.name}.` : 'Manage your business performance.'}
                                 </p>
                             </div>
                         </div>
                         <div className="flex items-center gap-4 self-end md:self-auto">
-                            <button className="p-2 text-slate-400 hover:text-slate-600 bg-white rounded-full border border-slate-200 shadow-sm relative">
-                                <span className="absolute top-0 right-0 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-white"></span>
-                                <EnvelopeIcon className="w-5 h-5" />
+                            <button
+                                onClick={() => { setShowCallbackModal(true); setCallbackSuccess(false); setCallbackForm({ contact_name: '', phone: '', preferred_time: '', message: '' }); }}
+                                className="p-2 text-slate-400 hover:text-blue-600 bg-white rounded-full border border-slate-200 shadow-sm relative transition-colors"
+                                title="Request a Callback"
+                            >
+                                <span className="absolute top-0 right-0 w-2.5 h-2.5 bg-green-500 rounded-full border-2 border-white animate-pulse"></span>
+                                <PhoneIcon className="w-5 h-5" />
                             </button>
                             <button
                                 onClick={() => navigate(`/business/${businessData.id}`, { state: { from: 'client-dashboard' } })}
-                                className="flex items-center gap-2 px-5 py-2.5 rounded-full text-white font-bold shadow-lg shadow-blue-500/20 bg-slate-900 hover:bg-slate-800 transition-all text-sm md:text-base"
+                                className={`flex items-center gap-2 px-5 py-2.5 rounded-full text-white font-bold shadow-lg transition-all text-sm md:text-base ${THEMES[currentTheme].button}`}
                             >
                                 <HomeIcon className="w-4 h-4" />
                                 <span className="hidden sm:inline">View Storefront</span>
@@ -529,9 +941,9 @@ export default function ClientDashboard() {
                                             <p className="text-slate-500 max-w-xl text-lg">Your AI-powered review system is active. Check your latest QR scan performance below.</p>
                                         </div>
                                         <div className="flex gap-3">
-                                            <button onClick={() => setActiveTab('qr')} className="px-6 py-3 bg-blue-600 text-white font-bold rounded-xl shadow-lg shadow-blue-600/20 hover:bg-blue-700 transition-colors flex items-center gap-2">
+                                            <button onClick={() => setActiveTab('qr-plate')} className="px-6 py-3 bg-blue-600 text-white font-bold rounded-xl shadow-lg shadow-blue-600/20 hover:bg-blue-700 transition-colors flex items-center gap-2">
                                                 <QrCodeIcon className="w-5 h-5" />
-                                                Get QR Code
+                                                Get QR Stand
                                             </button>
                                         </div>
                                     </div>
@@ -730,10 +1142,10 @@ export default function ClientDashboard() {
                                 className="grid md:grid-cols-2 gap-8 items-start"
                             >
                                 {/* Left: Premium 2D Printable Card Design */}
-                                <div className="bg-white rounded-[2rem] shadow-xl shadow-slate-200/50 border border-slate-100 p-8 md:p-10 flex flex-col items-center relative overflow-hidden group">
+                                <div className="bg-white rounded-[2rem] shadow-xl shadow-slate-200/50 border border-slate-100 p-4 sm:p-8 md:p-10 flex flex-col items-center relative overflow-hidden group">
 
                                     {/* The Printable Card Itself */}
-                                    <div id="printable-qr-card" className={`relative w-full max-w-[320px] min-h-[500px] rounded-3xl overflow-hidden shadow-2xl transition-transform duration-500 hover:scale-[1.02] flex flex-col items-center text-center bg-gradient-to-br ${theme.from} ${theme.to}`}>
+                                    <div id="printable-qr-card" className={`relative w-full max-w-[300px] sm:max-w-[320px] min-h-[500px] rounded-3xl overflow-hidden shadow-2xl transition-transform duration-500 hover:scale-[1.02] flex flex-col items-center text-center bg-gradient-to-br ${theme.from} ${theme.to}`}>
 
                                         {/* Glass Overlay/Shine */}
                                         <div className="absolute inset-0 bg-white/10 backdrop-blur-[1px]"></div>
@@ -870,13 +1282,24 @@ export default function ClientDashboard() {
                                     <div className="bg-white p-8 rounded-3xl border-2 border-slate-200 shadow-lg">
 
                                         {/* QR Stand Preview - CRISP & CLEAR */}
-                                        <div className="relative w-full h-[600px] flex items-center justify-center bg-gradient-to-br from-slate-50 to-slate-100 rounded-2xl overflow-hidden">
+                                        <div ref={qrStandRef} className="relative w-full h-[600px] flex items-center justify-center bg-gradient-to-br from-slate-50 to-slate-100 rounded-2xl overflow-hidden">
                                             {/* Premium 3D QR Stand - HD CRISP */}
                                             <Premium3DQRStands
                                                 activeDesign={activeDesign}
-                                                qrCodeUrl={qrCodeUrl}
+                                                qrCodeUrl={publicPageUrl}
                                                 businessData={businessData}
                                             />
+                                        </div>
+
+                                        {/* Download Option */}
+                                        <div className="mt-6 flex justify-center">
+                                            <button
+                                                onClick={handleDownloadQRStand}
+                                                className="px-6 py-3 rounded-xl border-2 border-slate-200 text-slate-700 font-bold shadow-sm hover:bg-slate-50 active:scale-95 transition-all flex items-center gap-2"
+                                            >
+                                                <ArrowDownTrayIcon className="w-5 h-5" />
+                                                Download Quick Print Version
+                                            </button>
                                         </div>
 
                                         {/* Color Selector - BELOW STAND (NO OVERLAP) */}
@@ -1022,10 +1445,25 @@ export default function ClientDashboard() {
                                                     />
                                                 </div>
 
+                                                <div className="flex items-center justify-between mb-4">
+                                                    <label className="block text-sm font-bold text-slate-700">Quantity</label>
+                                                    <div className="flex items-center border border-slate-200 rounded-lg overflow-hidden">
+                                                        <button
+                                                            className="px-3 py-1 bg-slate-50 text-slate-600 hover:bg-slate-100 transition-colors border-r border-slate-200"
+                                                            onClick={() => setPlateQuantity(Math.max(1, plateQuantity - 1))}
+                                                        >-</button>
+                                                        <span className="px-4 py-1 text-slate-900 font-medium font-mono text-center min-w-[3rem]">{plateQuantity}</span>
+                                                        <button
+                                                            className="px-3 py-1 bg-slate-50 text-slate-600 hover:bg-slate-100 transition-colors border-l border-slate-200"
+                                                            onClick={() => setPlateQuantity(plateQuantity + 1)}
+                                                        >+</button>
+                                                    </div>
+                                                </div>
+
                                                 <div className="bg-slate-50 rounded-xl p-4 border border-slate-200">
                                                     <div className="flex justify-between items-center mb-2">
-                                                        <span className="text-slate-600">Premium Acrylic Stand</span>
-                                                        <span className="font-bold text-slate-900">₹250.00</span>
+                                                        <span className="text-slate-600">Premium Acrylic Stand (x{plateQuantity})</span>
+                                                        <span className="font-bold text-slate-900">₹{250 * plateQuantity}.00</span>
                                                     </div>
                                                     <div className="flex justify-between items-center text-sm">
                                                         <span className="text-slate-500">Delivery Fee</span>
@@ -1034,55 +1472,23 @@ export default function ClientDashboard() {
                                                     <div className="border-t border-slate-200 my-3"></div>
                                                     <div className="flex justify-between items-center text-lg">
                                                         <span className="font-bold text-slate-900">Total</span>
-                                                        <span className="font-bold text-blue-600">₹250.00</span>
+                                                        <span className="font-bold text-blue-600">₹{250 * plateQuantity}.00</span>
                                                     </div>
+
                                                 </div>
 
                                                 <button
-                                                    onClick={async () => {
+                                                    onClick={() => {
                                                         if (!plateAddress) {
                                                             alert('Please enter a delivery address');
                                                             return;
                                                         }
-                                                        setPlateOrderStatus('processing');
-
-                                                        // Call Supabase
-                                                        const result = await addQROrder({
-                                                            business_id: businessData.id,
-                                                            business_name: businessData.name,
-                                                            plate_number: `${Math.floor(100 + Math.random() * 900)}-${Math.floor(100 + Math.random() * 900)}-${Math.floor(100 + Math.random() * 900)}`,
-                                                            address: plateAddress,
-                                                            design_info: {
-                                                                name: qrDesigns[activeDesign].name,
-                                                                colorCode: qrDesigns[activeDesign].color,
-                                                                details: qrDesigns[activeDesign].description
-                                                            }
-                                                        });
-
-                                                        if (result.success) {
-                                                            loadAllOrders(); // Reload to show tracking
-                                                            setTimeout(() => {
-                                                                setPlateOrderStatus('success');
-                                                            }, 1500);
-                                                        } else {
-                                                            alert('Order failed: ' + result.error);
-                                                            setPlateOrderStatus('idle');
-                                                        }
+                                                        setShowPaymentPopup(true);
                                                     }}
-                                                    disabled={plateOrderStatus === 'processing'}
-                                                    className="w-full py-4 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-xl font-bold shadow-lg shadow-blue-500/30 hover:shadow-blue-500/50 hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center justify-center gap-3 disabled:opacity-70 disabled:cursor-not-allowed"
+                                                    className="w-full py-4 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-xl font-bold shadow-lg shadow-blue-500/30 hover:shadow-blue-500/50 hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center justify-center gap-3"
                                                 >
-                                                    {plateOrderStatus === 'processing' ? (
-                                                        <>
-                                                            <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
-                                                            Processing...
-                                                        </>
-                                                    ) : (
-                                                        <>
-                                                            <CreditCardIcon className="w-6 h-6" />
-                                                            Pay ₹250 & Order Now
-                                                        </>
-                                                    )}
+                                                    <CreditCardIcon className="w-6 h-6" />
+                                                    Order Now
                                                 </button>
 
                                                 <p className="text-center text-xs text-slate-400 flex items-center justify-center gap-1">
@@ -1228,92 +1634,94 @@ export default function ClientDashboard() {
                                 exit={{ opacity: 0 }}
                                 className="space-y-8"
                             >
-                                {/* Products Header Stats */}
-                                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                                    <div className="bg-white p-6 rounded-2xl shadow-sm border border-orange-100 relative overflow-hidden">
-                                        <div className="absolute right-0 top-0 w-24 h-24 bg-orange-50 rounded-bl-full -mr-4 -mt-4"></div>
-                                        <h4 className="text-slate-500 font-medium mb-1 relative z-10">Top Performer</h4>
-                                        <div className="text-2xl font-bold text-slate-900 mb-1 relative z-10 truncate">
-                                            {businessData.products?.sort((a, b) => b.rating - a.rating)[0].name}
+                                <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
+                                    <div className="p-8 border-b border-slate-100 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                                        <div>
+                                            <h3 className="text-xl font-bold text-slate-900">Product Ratings Report</h3>
+                                            <p className="text-slate-500 text-sm mt-1">Track all your products and their performance.</p>
                                         </div>
-                                        <div className="flex items-center gap-1 text-sm text-orange-600 font-bold relative z-10">
-                                            <TrophyIcon className="w-4 h-4" />
-                                            <span>Most Loved Item</span>
-                                        </div>
-                                    </div>
-                                    <div className="bg-white p-6 rounded-2xl shadow-sm border border-blue-100 relative overflow-hidden">
-                                        <div className="absolute right-0 top-0 w-24 h-24 bg-blue-50 rounded-bl-full -mr-4 -mt-4"></div>
-                                        <h4 className="text-slate-500 font-medium mb-1 relative z-10">Total Portfolio</h4>
-                                        <div className="text-3xl font-bold text-slate-900 mb-1 relative z-10">
-                                            {businessData.products?.length} Items
-                                        </div>
-                                        <div className="flex items-center gap-1 text-sm text-blue-600 font-bold relative z-10">
-                                            <ShoppingBagIcon className="w-4 h-4" />
-                                            <span>Active Menu</span>
+                                        <div className="flex gap-3 items-center w-full md:w-auto">
+                                            <select
+                                                className="bg-slate-50 border border-slate-200 text-sm font-bold text-slate-700 rounded-xl px-4 py-2 outline-none flex-1 md:flex-none cursor-pointer"
+                                                value={productCategory}
+                                                onChange={(e) => setProductCategory(e.target.value)}
+                                            >
+                                                <option value="All">All Categories</option>
+                                                {[...new Set(businessData.products?.map(p => p.category))].map(cat => (
+                                                    <option key={cat} value={cat}>{cat}</option>
+                                                ))}
+                                            </select>
+                                            <button className={`px-4 py-2 text-white rounded-xl text-sm font-bold transition-colors ${THEMES[currentTheme].button}`}>
+                                                Export Report
+                                            </button>
                                         </div>
                                     </div>
-                                    <div className="bg-white p-6 rounded-2xl shadow-sm border border-green-100 relative overflow-hidden">
-                                        <div className="absolute right-0 top-0 w-24 h-24 bg-green-50 rounded-bl-full -mr-4 -mt-4"></div>
-                                        <h4 className="text-slate-500 font-medium mb-1 relative z-10">Menu Rating</h4>
-                                        <div className="text-3xl font-bold text-slate-900 mb-1 relative z-10">
-                                            {(businessData.products?.reduce((acc, curr) => acc + curr.rating, 0) / businessData.products?.length).toFixed(1)}
-                                        </div>
-                                        <div className="flex items-center gap-1 text-sm text-green-600 font-bold relative z-10">
-                                            <StarIcon className="w-4 h-4" />
-                                            <span>Average Score</span>
-                                        </div>
+                                    <div className="overflow-x-auto">
+                                        <table className="w-full text-left">
+                                            <thead className="bg-slate-50/50">
+                                                <tr>
+                                                    <th className="p-6 font-bold text-slate-500 text-sm uppercase tracking-wider">Product</th>
+                                                    <th className="p-6 font-bold text-slate-500 text-sm uppercase tracking-wider">Category</th>
+                                                    <th className="p-6 font-bold text-slate-500 text-sm uppercase tracking-wider">Rating</th>
+                                                    <th className="p-6 font-bold text-slate-500 text-sm uppercase tracking-wider">Trend</th>
+                                                    <th className="p-6 font-bold text-slate-500 text-sm uppercase tracking-wider text-right">Price</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody className="divide-y divide-slate-100">
+                                                {businessData.products
+                                                    ?.filter(p => productCategory === 'All' || p.category === productCategory)
+                                                    .sort((a, b) => b.rating - a.rating)
+                                                    .map((product) => (
+                                                        <tr key={product.id} className="hover:bg-slate-50/50 transition-colors group">
+                                                            <td className="p-6">
+                                                                <div className="flex items-center gap-4">
+                                                                    <img src={product.image} alt={product.name} className="w-12 h-12 rounded-lg object-cover shadow-sm bg-slate-100" />
+                                                                    <div>
+                                                                        <div className="font-bold text-slate-900">{product.name}</div>
+                                                                        <div className="text-xs text-slate-400 font-medium">ID: #{2000 + product.id}</div>
+                                                                    </div>
+                                                                </div>
+                                                            </td>
+                                                            <td className="p-6 text-slate-600 font-medium">
+                                                                <span className="bg-slate-100 text-slate-600 px-3 py-1 rounded-lg text-xs font-bold">{product.category}</span>
+                                                            </td>
+                                                            <td className="p-6">
+                                                                <div className="flex flex-col gap-1">
+                                                                    <div className="flex items-center gap-2">
+                                                                        <span className="font-bold text-slate-900">{product.rating}</span>
+                                                                        <div className="flex text-yellow-400">
+                                                                            {[...Array(5)].map((_, i) => (
+                                                                                <StarIcon key={i} className={`w-3 h-3 ${i < Math.floor(product.rating) ? 'fill-current' : 'text-slate-200'}`} />
+                                                                            ))}
+                                                                        </div>
+                                                                    </div>
+                                                                    <span className="text-xs text-slate-400">{product.reviews} reviews</span>
+                                                                </div>
+                                                            </td>
+                                                            <td className="p-6">
+                                                                <div className="flex items-center gap-1.5">
+                                                                    {product.trend === 'up' ? (
+                                                                        <ArrowTrendingUpIcon className="w-4 h-4 text-green-500" />
+                                                                    ) : product.trend === 'down' ? (
+                                                                        <ArrowTrendingUpIcon className="w-4 h-4 text-red-500 rotate-180" />
+                                                                    ) : (
+                                                                        <span className="text-slate-300 font-bold">-</span>
+                                                                    )}
+                                                                    <span className={`text-xs font-bold ${product.trend === 'up' ? 'text-green-600' :
+                                                                        product.trend === 'down' ? 'text-red-500' : 'text-slate-400'
+                                                                        }`}>
+                                                                        {product.trend === 'up' ? 'Trending' : product.trend === 'down' ? 'Cooling' : 'Stable'}
+                                                                    </span>
+                                                                </div>
+                                                            </td>
+                                                            <td className="p-6 text-right font-bold text-slate-900">
+                                                                {product.price}
+                                                            </td>
+                                                        </tr>
+                                                    ))}
+                                            </tbody>
+                                        </table>
                                     </div>
-                                </div>
-
-                                {/* Products Grid */}
-                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                                    {businessData.products?.map((product) => (
-                                        <div key={product.id} className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden hover:shadow-lg transition-all group">
-                                            <div className="h-48 overflow-hidden relative">
-                                                <img
-                                                    src={product.image}
-                                                    alt={product.name}
-                                                    className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
-                                                />
-                                                <div className="absolute top-3 right-3 px-2 py-1 bg-white/90 backdrop-blur-sm rounded-lg text-xs font-bold text-slate-800 shadow-sm">
-                                                    {product.category}
-                                                </div>
-                                            </div>
-                                            <div className="p-5">
-                                                <div className="flex justify-between items-start mb-2">
-                                                    <h3 className="font-bold text-slate-900 line-clamp-1" title={product.name}>{product.name}</h3>
-                                                    <span className="text-slate-900 font-bold">{product.price}</span>
-                                                </div>
-
-                                                <div className="flex items-center gap-4 mb-4 text-sm text-slate-500">
-                                                    <div className="flex items-center gap-1">
-                                                        <StarIcon className="w-4 h-4 text-yellow-400" />
-                                                        <span className="font-bold text-slate-700">{product.rating}</span>
-                                                        <span className="text-xs">({product.reviews})</span>
-                                                    </div>
-                                                    <div className="flex items-center gap-1">
-                                                        {product.trend === 'up' ? (
-                                                            <ArrowTrendingUpIcon className="w-4 h-4 text-green-500" />
-                                                        ) : product.trend === 'down' ? (
-                                                            <ArrowTrendingUpIcon className="w-4 h-4 text-red-500 rotate-180" />
-                                                        ) : (
-                                                            <span className="text-slate-300 font-bold">-</span>
-                                                        )}
-                                                        <span className={`text-xs font-medium ${product.trend === 'up' ? 'text-green-600' :
-                                                            product.trend === 'down' ? 'text-red-500' : 'text-slate-400'
-                                                            }`}>
-                                                            {product.trend === 'up' ? 'Trending' : product.trend === 'down' ? 'Cooling' : 'Stable'}
-                                                        </span>
-                                                    </div>
-                                                </div>
-
-                                                <button className="w-full py-2.5 rounded-xl bg-slate-50 text-slate-600 text-sm font-bold border border-slate-200 hover:bg-slate-100 hover:text-slate-900 transition-colors flex items-center justify-center gap-2">
-                                                    <DocumentTextIcon className="w-4 h-4" />
-                                                    View Reviews
-                                                </button>
-                                            </div>
-                                        </div>
-                                    ))}
                                 </div>
                             </motion.div>
                         )}
@@ -1333,7 +1741,7 @@ export default function ClientDashboard() {
                                             <h3 className="text-xl font-bold text-slate-900">Team Performance</h3>
                                             <p className="text-slate-500 text-sm mt-1">Track which team members are delivering the best service.</p>
                                         </div>
-                                        <button className="px-4 py-2 bg-slate-900 text-white rounded-xl text-sm font-bold hover:bg-slate-800 transition-colors">
+                                        <button className={`px-4 py-2 text-white rounded-xl text-sm font-bold transition-colors ${THEMES[currentTheme].button}`}>
                                             Export Report
                                         </button>
                                     </div>
@@ -1349,56 +1757,58 @@ export default function ClientDashboard() {
                                                 </tr>
                                             </thead>
                                             <tbody className="divide-y divide-slate-100">
-                                                {businessData.team?.map((member) => (
-                                                    <tr key={member.id} className="hover:bg-slate-50/50 transition-colors group">
-                                                        <td className="p-6">
-                                                            <div className="flex items-center gap-4">
-                                                                <img src={member.image} alt={member.name} className="w-12 h-12 rounded-full object-cover border-2 border-white shadow-sm" />
-                                                                <div>
-                                                                    <div className="font-bold text-slate-900">{member.name}</div>
-                                                                    <div className="text-xs text-slate-400 font-medium">ID: #{1000 + member.id}</div>
+                                                {businessData.team
+                                                    ?.sort((a, b) => b.rating - a.rating)
+                                                    .map((member) => (
+                                                        <tr key={member.id} className="hover:bg-slate-50/50 transition-colors group">
+                                                            <td className="p-6">
+                                                                <div className="flex items-center gap-4">
+                                                                    <img src={member.image} alt={member.name} className="w-12 h-12 rounded-full object-cover border-2 border-white shadow-sm" />
+                                                                    <div>
+                                                                        <div className="font-bold text-slate-900">{member.name}</div>
+                                                                        <div className="text-xs text-slate-400 font-medium">ID: #{1000 + member.id}</div>
+                                                                    </div>
                                                                 </div>
-                                                            </div>
-                                                        </td>
-                                                        <td className="p-6 text-slate-600 font-medium">
-                                                            {member.role}
-                                                        </td>
-                                                        <td className="p-6">
-                                                            <div className="flex items-center gap-2">
-                                                                <span className="font-bold text-slate-900">{member.rating}</span>
-                                                                <div className="flex text-yellow-400">
-                                                                    {[...Array(5)].map((_, i) => (
-                                                                        <StarIcon key={i} className={`w-3 h-3 ${i < Math.floor(member.rating) ? 'fill-current' : 'text-slate-200'}`} />
-                                                                    ))}
+                                                            </td>
+                                                            <td className="p-6 text-slate-600 font-medium">
+                                                                {member.role}
+                                                            </td>
+                                                            <td className="p-6">
+                                                                <div className="flex items-center gap-2">
+                                                                    <span className="font-bold text-slate-900">{member.rating}</span>
+                                                                    <div className="flex text-yellow-400">
+                                                                        {[...Array(5)].map((_, i) => (
+                                                                            <StarIcon key={i} className={`w-3 h-3 ${i < Math.floor(member.rating) ? 'fill-current' : 'text-slate-200'}`} />
+                                                                        ))}
+                                                                    </div>
                                                                 </div>
-                                                            </div>
-                                                        </td>
-                                                        <td className="p-6">
-                                                            <div className="flex items-center gap-3">
-                                                                <div className="flex-1 w-32 h-2 bg-slate-100 rounded-full overflow-hidden">
-                                                                    <div
-                                                                        className="h-full bg-blue-500 rounded-full"
-                                                                        style={{ width: `${(member.selections / 300) * 100}%` }}
-                                                                    ></div>
+                                                            </td>
+                                                            <td className="p-6">
+                                                                <div className="flex items-center gap-3">
+                                                                    <div className="flex-1 w-32 h-2 bg-slate-100 rounded-full overflow-hidden">
+                                                                        <div
+                                                                            className={`h-full rounded-full ${THEMES[currentTheme].indicator.split(' ')[0]}`}
+                                                                            style={{ width: `${(member.selections / 300) * 100}%` }}
+                                                                        ></div>
+                                                                    </div>
+                                                                    <span className="text-sm font-bold text-slate-700">{member.selections}</span>
                                                                 </div>
-                                                                <span className="text-sm font-bold text-slate-700">{member.selections}</span>
-                                                            </div>
-                                                            <p className="text-xs text-slate-400 mt-1">Customers selected this month</p>
-                                                        </td>
-                                                        <td className="p-6">
-                                                            <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold border ${member.status === 'Legend' ? 'bg-purple-50 text-purple-700 border-purple-100' :
-                                                                member.status === 'Star' ? 'bg-amber-50 text-amber-700 border-amber-100' :
-                                                                    member.status === 'Rising' ? 'bg-blue-50 text-blue-700 border-blue-100' :
-                                                                        'bg-slate-50 text-slate-600 border-slate-100'
-                                                                }`}>
-                                                                {member.status === 'Legend' && <FireIcon className="w-3 h-3" />}
-                                                                {member.status === 'Star' && <StarIcon className="w-3 h-3" />}
-                                                                {member.status === 'Rising' && <ArrowTrendingUpIcon className="w-3 h-3" />}
-                                                                {member.status}
-                                                            </span>
-                                                        </td>
-                                                    </tr>
-                                                ))}
+                                                                <p className="text-xs text-slate-400 mt-1">Customers selected this month</p>
+                                                            </td>
+                                                            <td className="p-6">
+                                                                <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold border ${member.status === 'Legend' ? 'bg-purple-50 text-purple-700 border-purple-100' :
+                                                                    member.status === 'Star' ? 'bg-amber-50 text-amber-700 border-amber-100' :
+                                                                        member.status === 'Rising' ? 'bg-blue-50 text-blue-700 border-blue-100' :
+                                                                            'bg-slate-50 text-slate-600 border-slate-100'
+                                                                    }`}>
+                                                                    {member.status === 'Legend' && <FireIcon className="w-3 h-3" />}
+                                                                    {member.status === 'Star' && <StarIcon className="w-3 h-3" />}
+                                                                    {member.status === 'Rising' && <ArrowTrendingUpIcon className="w-3 h-3" />}
+                                                                    {member.status}
+                                                                </span>
+                                                            </td>
+                                                        </tr>
+                                                    ))}
                                             </tbody>
                                         </table>
                                     </div>
@@ -1601,6 +2011,41 @@ export default function ClientDashboard() {
                                         )}
                                     </>
                                 )}
+                            </motion.div>
+                        )}
+
+
+                        {/* --- INSTAGRAM QR TAB --- */}
+                        {activeTab === 'instagram-qr' && (
+                            <motion.div
+                                key="instagram-qr"
+                                initial={{ opacity: 0, x: 20 }}
+                                animate={{ opacity: 1, x: 0 }}
+                                exit={{ opacity: 0, x: -20 }}
+                                className="space-y-8"
+                            >
+                                <div className="mb-8">
+                                    <h2 className="text-3xl font-bold text-slate-900">Instagram Growth & Offers</h2>
+                                    <p className="text-slate-500">Turn followers into customers with exclusive rewards.</p>
+                                </div>
+                                <InstagramQRManager businessData={businessData} />
+                            </motion.div>
+                        )}
+
+                        {/* --- COUPONS TAB --- */}
+                        {activeTab === 'coupons' && (
+                            <motion.div
+                                key="coupons"
+                                initial={{ opacity: 0, x: 20 }}
+                                animate={{ opacity: 1, x: 0 }}
+                                exit={{ opacity: 0, x: -20 }}
+                                className="space-y-8"
+                            >
+                                <div className="mb-8">
+                                    <h2 className="text-3xl font-bold text-slate-900">Coupon Management</h2>
+                                    <p className="text-slate-500">Verify and track customer redemptions.</p>
+                                </div>
+                                <CouponManager businessData={businessData} />
                             </motion.div>
                         )}
 
@@ -1810,41 +2255,271 @@ export default function ClientDashboard() {
                             </motion.div>
                         )}
 
-                        {/* --- PROFILE TAB --- */}
+                        {/* --- SETTINGS TAB --- */}
                         {activeTab === 'profile' && (
                             <motion.div
-                                key="profile"
-                                className="bg-white rounded-2xl shadow-sm border border-gray-100 p-8"
+                                key="settings"
+                                initial={{ opacity: 0, y: 10 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                exit={{ opacity: 0, y: -10 }}
+                                className="space-y-6"
                             >
-                                <div className="flex items-center gap-6 mb-8">
-                                    <div className="w-24 h-24 rounded-2xl shadow-lg flex items-center justify-center text-6xl overflow-hidden shrink-0 border border-gray-100 relative bg-gray-50">
-                                        <span className="absolute select-none">{businessData.logo}</span>
-                                        <img
-                                            src={businessData.heroImage}
-                                            className="w-full h-full object-cover relative z-10"
-                                            alt={businessData.name}
-                                            onError={(e) => e.target.style.display = 'none'}
-                                        />
+                                {/* --- SUBSCRIPTION CARD (NEW) --- */}
+                                <div className={`relative overflow-hidden rounded-3xl bg-white p-8 shadow-xl border ${THEMES[currentTheme].borderColor}`}>
+                                    <div className={`absolute top-0 right-0 -mt-16 -mr-16 h-64 w-64 rounded-full ${THEMES[currentTheme].lightAccent} opacity-50 blur-3xl`}></div>
+
+                                    <div className="relative z-10 flex flex-col justify-between gap-6 md:flex-row md:items-center">
+                                        <div>
+                                            <div className="mb-2 flex items-center gap-3">
+                                                <div className={`flex h-10 w-10 items-center justify-center rounded-xl ${THEMES[currentTheme].lightAccent} ${THEMES[currentTheme].accent}`}>
+                                                    <CalendarDaysIcon className="h-6 w-6" />
+                                                </div>
+                                                <h3 className="text-2xl font-bold text-slate-900">Subscription Status</h3>
+                                                <span className={`rounded-full px-3 py-1 text-xs font-bold uppercase tracking-wide border ${new Date(businessData.subscriptionExpiry || new Date(new Date().setFullYear(new Date().getFullYear() + 1))).getTime() - new Date().getTime() < 7 * 24 * 60 * 60 * 1000 ? 'bg-red-100 text-red-700 border-red-200' : 'bg-green-100 text-green-700 border-green-200'}`}>
+                                                    {new Date(businessData.subscriptionExpiry || new Date(new Date().setFullYear(new Date().getFullYear() + 1))).getTime() - new Date().getTime() < 7 * 24 * 60 * 60 * 1000 ? 'Expiring Soon' : 'Active'}
+                                                </span>
+                                            </div>
+                                            <p className="max-w-xl text-lg text-slate-500">
+                                                Your <span className="font-bold text-slate-900">Premium Business Plan</span> is active.
+                                                You have full access to all features until <span className="font-bold text-slate-900">{new Date(businessData.subscriptionExpiry || new Date(new Date().setFullYear(new Date().getFullYear() + 1))).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}</span>.
+                                            </p>
+                                        </div>
+
+                                        <div className="flex flex-col gap-3 sm:flex-row">
+                                            <button className="flex items-center justify-center gap-2 rounded-xl bg-slate-900 px-6 py-3 font-bold text-white shadow-lg shadow-slate-900/10 transition-all hover:bg-slate-800 hover:shadow-xl active:scale-95">
+                                                Manage Plan
+                                            </button>
+                                            <button className="flex items-center justify-center gap-2 rounded-xl border border-slate-200 px-6 py-3 font-bold text-slate-600 transition-all hover:bg-slate-50 hover:text-slate-900 active:scale-95">
+                                                View Invoice
+                                            </button>
+                                        </div>
                                     </div>
-                                    <div>
-                                        <h3 className="text-2xl font-bold text-gray-900">{businessData.name}</h3>
-                                        <p className="text-gray-500">{businessData.type}</p>
+
+                                    {/* Progress Bar */}
+                                    <div className="mt-8">
+                                        {(() => {
+                                            const expiryDate = new Date(businessData.subscriptionExpiry || new Date(new Date().setFullYear(new Date().getFullYear() + 1)));
+                                            const now = new Date();
+                                            const totalDuration = 365 * 24 * 60 * 60 * 1000; // Assuming 1 year plan
+                                            const remaining = expiryDate.getTime() - now.getTime();
+                                            const elapsed = totalDuration - remaining;
+                                            const daysRemaining = Math.max(0, Math.ceil(remaining / (24 * 60 * 60 * 1000)));
+                                            const progress = Math.min(100, Math.max(0, (elapsed / totalDuration) * 100));
+
+                                            return (
+                                                <>
+                                                    <div className="mb-2 flex justify-between text-sm font-medium text-slate-500">
+                                                        <span>{daysRemaining < 30 ? 'Your plan is ending soon' : 'Plan Validation'}</span>
+                                                        <span className={`${daysRemaining < 7 ? 'text-red-500 font-bold' : THEMES[currentTheme].accent}`}>{daysRemaining} Days Remaining</span>
+                                                    </div>
+                                                    <div className="h-3 w-full overflow-hidden rounded-full bg-slate-100">
+                                                        <div
+                                                            className={`h-full rounded-full transition-all duration-1000 ${daysRemaining < 7 ? 'bg-red-500' : (THEMES[currentTheme].sidebar === 'bg-white border-r border-slate-200' ? 'bg-slate-900' : THEMES[currentTheme].sidebar.split(' ')[0])}`}
+                                                            style={{ width: `${progress}%` }}
+                                                        ></div>
+                                                    </div>
+                                                </>
+                                            );
+                                        })()}
                                     </div>
                                 </div>
-                                <div className="grid md:grid-cols-2 gap-6">
-                                    <div>
-                                        <label className="block text-sm font-bold text-gray-700 mb-2">Business Email</label>
-                                        <div className="p-3 bg-gray-50 rounded-lg border border-gray-100 text-gray-800">contact@{businessData.id}.com</div>
-                                    </div>
-                                    <div>
-                                        <label className="block text-sm font-bold text-gray-700 mb-2">Subscription Plan</label>
-                                        <div className="p-3 bg-green-50 rounded-lg border border-green-100 text-green-700 font-bold flex items-center gap-2">
-                                            <CheckCircleIcon className="w-5 h-5" />
-                                            {businessData.plan} (Active)
+
+                                <div className={`bg-white rounded-3xl shadow-xl ${THEMES[currentTheme].borderColor} border p-10 relative overflow-hidden`}>
+                                    <div className={`absolute top-0 right-0 w-96 h-96 ${THEMES[currentTheme].lightAccent} rounded-full blur-3xl -mr-32 -mt-32 opacity-50`}></div>
+
+                                    <div className="relative z-10">
+                                        <div className="flex items-center gap-4 mb-8">
+                                            <div className={`p-4 rounded-2xl ${THEMES[currentTheme].lightAccent} ${THEMES[currentTheme].accent}`}>
+                                                <PaintBrushIcon className="w-8 h-8" />
+                                            </div>
+                                            <div>
+                                                <h3 className="text-2xl font-bold text-slate-900">Visual Appearance</h3>
+                                                <p className="text-slate-500">Customize your dashboard experience.</p>
+                                            </div>
+                                        </div>
+
+                                        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                                            {Object.keys(THEMES).map((key) => (
+                                                <button
+                                                    key={key}
+                                                    onClick={() => setCurrentTheme(key)}
+                                                    className={`group relative h-40 rounded-2xl border-2 transition-all overflow-hidden text-left flex flex-col shadow-sm hover:shadow-md ${currentTheme === key
+                                                        ? `${THEMES[key].activeBorder} ring-2 ring-offset-2 ring-offset-white ring-${THEMES[key].activeText.split('-')[1]}-400`
+                                                        : 'border-slate-100 hover:border-slate-300'
+                                                        }`}
+                                                >
+                                                    {/* Preview Header */}
+                                                    <div className={`h-2/3 w-full bg-gradient-to-r ${THEMES[key].sidebarGradient.replace('from-', 'from-').replace('to-', 'to-')} p-4 flex items-center gap-2`}>
+                                                        <div className="w-2 h-2 rounded-full bg-white/20"></div>
+                                                        <div className="w-8 h-2 rounded-full bg-white/20"></div>
+                                                    </div>
+                                                    {/* Preview Body */}
+                                                    <div className={`h-1/3 w-full ${THEMES[key].pageBg} p-4 flex items-center justify-between`}>
+                                                        <span className={`font-bold ${THEMES[key].accent}`}>{THEMES[key].name}</span>
+                                                        {currentTheme === key && (
+                                                            <div className={`w-6 h-6 rounded-full ${THEMES[key].accent.replace('text-', 'bg-')} text-white flex items-center justify-center shadow-lg`}>
+                                                                <CheckIcon className="w-3 h-3" />
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                </button>
+                                            ))}
                                         </div>
                                     </div>
                                 </div>
                             </motion.div>
+                        )}
+
+                        {/* --- SUPPORT TAB (NEW) --- */}
+                        {activeTab === 'support' && (
+                            <motion.div
+                                key="support"
+                                initial={{ opacity: 0, y: 10 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                exit={{ opacity: 0, y: -10 }}
+                                className="space-y-8"
+                            >
+                                <div className="text-center max-w-2xl mx-auto mb-12">
+                                    <h2 className="text-3xl font-bold text-slate-900 mb-4">How can we help you today?</h2>
+                                    <p className="text-lg text-slate-500">Our dedicated support team is available 24/7 to assist you with any questions or issues.</p>
+                                </div>
+
+                                <div className="grid md:grid-cols-2 gap-8 max-w-4xl mx-auto">
+                                    {/* Call Us Card */}
+                                    <div className="group relative bg-white rounded-3xl p-8 shadow-xl border border-slate-100 overflow-hidden hover:shadow-2xl transition-all duration-300">
+                                        <div className="absolute top-0 right-0 w-64 h-64 bg-blue-50 rounded-full blur-3xl -mr-16 -mt-16 group-hover:bg-blue-100 transition-colors"></div>
+                                        <div className="relative z-10 flex flex-col items-center text-center">
+                                            <div className="w-20 h-20 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center mb-6 shadow-sm group-hover:scale-110 transition-transform duration-300">
+                                                <PhoneIcon className="w-10 h-10" />
+                                            </div>
+                                            <h3 className="text-2xl font-bold text-slate-900 mb-2">Priority Phone Support</h3>
+                                            <p className="text-slate-500 mb-8">Speak directly with a support specialist.</p>
+                                            <button
+                                                onClick={() => setShowCallModal(true)}
+                                                className="w-full py-4 bg-blue-600 text-white rounded-xl font-bold text-lg shadow-lg shadow-blue-200 hover:bg-blue-700 hover:shadow-blue-300 transition-all active:scale-95"
+                                            >
+                                                Call Now
+                                            </button>
+                                        </div>
+                                    </div>
+
+                                    {/* Email Us Card */}
+                                    <div className="group relative bg-white rounded-3xl p-8 shadow-xl border border-slate-100 overflow-hidden hover:shadow-2xl transition-all duration-300">
+                                        <div className="absolute top-0 left-0 w-64 h-64 bg-purple-50 rounded-full blur-3xl -ml-16 -mt-16 group-hover:bg-purple-100 transition-colors"></div>
+                                        <div className="relative z-10 flex flex-col items-center text-center">
+                                            <div className="w-20 h-20 bg-purple-100 text-purple-600 rounded-full flex items-center justify-center mb-6 shadow-sm group-hover:scale-110 transition-transform duration-300">
+                                                <EnvelopeIcon className="w-10 h-10" />
+                                            </div>
+                                            <h3 className="text-2xl font-bold text-slate-900 mb-2">Email Support</h3>
+                                            <p className="text-slate-500 mb-8">Get a response within 24 hours.</p>
+                                            <button
+                                                onClick={() => window.open('https://mail.google.com/mail/?view=cm&fs=1&to=help@rankbag.com', '_blank')}
+                                                className="w-full py-4 bg-purple-600 text-white rounded-xl font-bold text-lg shadow-lg shadow-purple-200 hover:bg-purple-700 hover:shadow-purple-300 transition-all active:scale-95"
+                                            >
+                                                Send an Email
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* FAQ / Help Articles Placeholder */}
+                                <div className="max-w-4xl mx-auto mt-12 bg-white rounded-2xl border border-slate-100 p-8 shadow-sm">
+                                    <h3 className="font-bold text-slate-900 mb-6 flex items-center gap-2">
+                                        <LifebuoyIcon className="w-5 h-5 text-slate-400" />
+                                        Common Questions
+                                    </h3>
+                                    <div className="space-y-4">
+                                        <div className="space-y-4">
+                                            {[
+                                                { q: "How does the AI Review Reply work?", a: "Our AI analyzes the sentiment of the customer review and generates a personalized, professional response based on your business profile. You can filter for 4-5 stars to auto-reply, or review lower ratings manually." },
+                                                { q: "Can I customize the QR Stand design?", a: "Absolutely! Navigate to the 'Order QR Stand' tab where you can view our premium 3D acrylic models. We offer various styles including Corporate Blue, Modern Green, and Luxury Gold to match your brand." },
+                                                { q: "How can I increase my Google reviews?", a: "Encourage happy customers to scan your QR code at checkout. You can also share your review link on social media using the tools in the 'Instagram QR Offers' tab." },
+                                                { q: "Where can I find my digital QR code?", a: "Navigate to the 'QR Code Assets' tab to view and download your unique QR code in high resolution for printing or digital use." }
+                                            ].map((item, i) => (
+                                                <div
+                                                    key={i}
+                                                    onClick={() => setOpenFaq(openFaq === i ? null : i)}
+                                                    className={`rounded-xl transition-all duration-300 cursor-pointer overflow-hidden border ${openFaq === i ? `bg-white shadow-lg ${THEMES[currentTheme].borderColor} ring-1 ring-opacity-50` : 'bg-slate-50 hover:bg-slate-100 border-transparent'}`}
+                                                >
+                                                    <div className="p-4 flex justify-between items-center bg-white/50">
+                                                        <span className={`font-medium ${openFaq === i ? THEMES[currentTheme].accent : 'text-slate-700 group-hover:text-slate-900'}`}>{item.q}</span>
+                                                        <ChevronRightIcon className={`w-4 h-4 text-slate-400 transition-transform duration-300 ${openFaq === i ? 'rotate-90 text-blue-500' : ''}`} />
+                                                    </div>
+                                                    <AnimatePresence>
+                                                        {openFaq === i && (
+                                                            <motion.div
+                                                                initial={{ height: 0, opacity: 0 }}
+                                                                animate={{ height: 'auto', opacity: 1 }}
+                                                                exit={{ height: 0, opacity: 0 }}
+                                                                transition={{ duration: 0.2 }}
+                                                            >
+                                                                <div className="p-4 pt-0 text-sm text-slate-500 leading-relaxed border-t border-slate-100/50">
+                                                                    {item.a}
+                                                                </div>
+                                                            </motion.div>
+                                                        )}
+                                                    </AnimatePresence>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                </div>
+                            </motion.div>
+                        )}
+                    </AnimatePresence>
+
+                    {/* Support Call Modal */}
+                    <AnimatePresence>
+                        {showCallModal && (
+                            <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
+                                <motion.div
+                                    initial={{ opacity: 0 }}
+                                    animate={{ opacity: 1 }}
+                                    exit={{ opacity: 0 }}
+                                    onClick={() => setShowCallModal(false)}
+                                    className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm"
+                                ></motion.div>
+
+                                <motion.div
+                                    initial={{ opacity: 0, scale: 0.9, y: 20 }}
+                                    animate={{ opacity: 1, scale: 1, y: 0 }}
+                                    exit={{ opacity: 0, scale: 0.9, y: 20 }}
+                                    className="relative bg-white rounded-3xl shadow-2xl p-8 max-w-sm w-full text-center overflow-hidden border border-white/20"
+                                >
+                                    {/* Cool Background Effect */}
+                                    <div className="absolute inset-0 bg-gradient-to-br from-blue-500/10 to-purple-500/10 pointer-events-none"></div>
+                                    <div className="absolute -top-10 -right-10 w-40 h-40 bg-blue-500/20 rounded-full blur-3xl"></div>
+
+                                    <div className="relative z-10 bg-white/50 backdrop-blur rounded-2xl p-6 border border-slate-100 shadow-inner mb-6 flex flex-col items-center">
+                                        <div className="w-20 h-20 bg-gradient-to-br from-green-400 to-green-600 rounded-full flex items-center justify-center shadow-lg shadow-green-500/30 mb-4 animate-pulse">
+                                            <PhoneIcon className="w-10 h-10 text-white" />
+                                        </div>
+                                        <h3 className="text-slate-500 font-bold text-sm uppercase tracking-wider mb-2">Priority Support Line</h3>
+                                        <div className="text-3xl font-black text-slate-900 tracking-tight font-mono">
+                                            +1 (800) 555-0199
+                                        </div>
+                                        <p className="text-xs text-slate-400 mt-2">Available 24/7 for Premium Partners</p>
+                                    </div>
+
+                                    <div className="relative z-10 grid gap-3">
+                                        <button
+                                            onClick={() => {
+                                                window.location.href = 'tel:+18005550199';
+                                            }}
+                                            className="w-full py-3.5 bg-slate-900 text-white rounded-xl font-bold shadow-lg hover:bg-slate-800 transition-colors flex items-center justify-center gap-2"
+                                        >
+                                            <PhoneIcon className="w-4 h-4" />
+                                            Call Now
+                                        </button>
+                                        <button
+                                            onClick={() => setShowCallModal(false)}
+                                            className="w-full py-3 text-slate-500 font-bold hover:text-slate-800 transition-colors"
+                                        >
+                                            Close
+                                        </button>
+                                    </div>
+                                </motion.div>
+                            </div>
                         )}
                     </AnimatePresence>
 
@@ -1862,6 +2537,209 @@ export default function ClientDashboard() {
                     `}</style>
                 </div >
             </main >
+
+            {/* ===== REQUEST CALLBACK MODAL ===== */}
+            <AnimatePresence>
+                {showCallbackModal && (
+                    <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        className="fixed inset-0 z-[999] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm"
+                        onClick={(e) => { if (e.target === e.currentTarget) setShowCallbackModal(false); }}
+                    >
+                        <motion.div
+                            initial={{ scale: 0.9, y: 20, opacity: 0 }}
+                            animate={{ scale: 1, y: 0, opacity: 1 }}
+                            exit={{ scale: 0.9, y: 20, opacity: 0 }}
+                            transition={{ type: 'spring', stiffness: 300, damping: 25 }}
+                            className="bg-white rounded-3xl shadow-2xl w-full max-w-md overflow-hidden"
+                        >
+                            <div className="relative bg-gradient-to-br from-[#0B2046] to-[#24889F] p-8 text-white">
+                                <button onClick={() => setShowCallbackModal(false)} className="absolute top-4 right-4 p-1.5 rounded-full bg-white/10 hover:bg-white/20 transition-colors">
+                                    <XMarkIcon className="w-5 h-5" />
+                                </button>
+                                <div className="flex items-center gap-4">
+                                    <div className="w-14 h-14 bg-white/15 rounded-2xl flex items-center justify-center shadow-lg">
+                                        <PhoneIcon className="w-7 h-7 text-white" />
+                                    </div>
+                                    <div>
+                                        <h2 className="text-xl font-bold">Request a Callback</h2>
+                                        <p className="text-white/70 text-sm mt-0.5">Our team will call you back shortly</p>
+                                    </div>
+                                </div>
+                            </div>
+                            <div className="p-8">
+                                {callbackSuccess ? (
+                                    <motion.div initial={{ scale: 0.8, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className="text-center py-6">
+                                        <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                                            <CheckCircleIcon className="w-10 h-10 text-green-500" />
+                                        </div>
+                                        <h3 className="text-xl font-bold text-slate-900 mb-2">Request Submitted! 🎉</h3>
+                                        <p className="text-slate-500 text-sm mb-6">Our team will call you at <span className="font-bold text-slate-700">{callbackForm.phone}</span> within 24 hours.</p>
+                                        <button onClick={() => setShowCallbackModal(false)} className="px-6 py-2.5 bg-slate-900 text-white rounded-xl font-bold hover:bg-slate-800 transition-colors">Done</button>
+                                    </motion.div>
+                                ) : (
+                                    <form onSubmit={async (e) => {
+                                        e.preventDefault();
+                                        if (!callbackForm.phone || !callbackForm.contact_name) return;
+                                        setCallbackSubmitting(true);
+                                        const result = await addCallbackRequest({
+                                            business_id: businessData.id, business_name: businessData.name,
+                                            contact_name: callbackForm.contact_name, phone: callbackForm.phone,
+                                            preferred_time: callbackForm.preferred_time, message: callbackForm.message,
+                                        });
+                                        setCallbackSubmitting(false);
+                                        if (result.success) { setCallbackSuccess(true); } else { alert('Failed to submit. Please try again.'); }
+                                    }} className="space-y-4">
+                                        <div>
+                                            <label className="block text-sm font-bold text-slate-700 mb-1.5">Your Name <span className="text-red-500">*</span></label>
+                                            <input type="text" required placeholder="e.g. Rahul Sharma" value={callbackForm.contact_name}
+                                                onChange={(e) => setCallbackForm(f => ({ ...f, contact_name: e.target.value }))}
+                                                className="w-full px-4 py-3 rounded-xl border-2 border-slate-200 focus:border-blue-500 focus:outline-none transition-colors text-sm" />
+                                        </div>
+                                        <div>
+                                            <label className="block text-sm font-bold text-slate-700 mb-1.5">Phone Number <span className="text-red-500">*</span></label>
+                                            <input type="tel" required placeholder="+91 98765 43210" value={callbackForm.phone}
+                                                onChange={(e) => setCallbackForm(f => ({ ...f, phone: e.target.value }))}
+                                                className="w-full px-4 py-3 rounded-xl border-2 border-slate-200 focus:border-blue-500 focus:outline-none transition-colors text-sm" />
+                                        </div>
+                                        <div>
+                                            <label className="block text-sm font-bold text-slate-700 mb-1.5">Preferred Call Time</label>
+                                            <select value={callbackForm.preferred_time} onChange={(e) => setCallbackForm(f => ({ ...f, preferred_time: e.target.value }))}
+                                                className="w-full px-4 py-3 rounded-xl border-2 border-slate-200 focus:border-blue-500 focus:outline-none transition-colors text-sm bg-white">
+                                                <option value="">Any time</option>
+                                                <option value="Morning (9 AM - 12 PM)">Morning (9 AM - 12 PM)</option>
+                                                <option value="Afternoon (12 PM - 4 PM)">Afternoon (12 PM - 4 PM)</option>
+                                                <option value="Evening (4 PM - 7 PM)">Evening (4 PM - 7 PM)</option>
+                                            </select>
+                                        </div>
+                                        <div>
+                                            <label className="block text-sm font-bold text-slate-700 mb-1.5">Message / Query <span className="text-slate-400 font-normal">(optional)</span></label>
+                                            <textarea rows={3} placeholder="What would you like to discuss?" value={callbackForm.message}
+                                                onChange={(e) => setCallbackForm(f => ({ ...f, message: e.target.value }))}
+                                                className="w-full px-4 py-3 rounded-xl border-2 border-slate-200 focus:border-blue-500 focus:outline-none transition-colors text-sm resize-none" />
+                                        </div>
+                                        <button type="submit" disabled={callbackSubmitting}
+                                            className="w-full py-3.5 bg-gradient-to-r from-[#0B2046] to-[#24889F] text-white font-bold rounded-xl shadow-lg hover:opacity-90 active:scale-[0.98] transition-all disabled:opacity-70 flex items-center justify-center gap-2">
+                                            {callbackSubmitting ? (<><div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div> Submitting...</>) : (<><PhoneIcon className="w-5 h-5" /> Request Callback</>)}
+                                        </button>
+                                    </form>
+                                )}
+                            </div>
+                        </motion.div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
+
+
+
+            {/* PAYMENT POPUP MODAL */}
+            <AnimatePresence>
+                {showPaymentPopup && businessData && (
+                    <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-md"
+                    >
+                        <motion.div
+                            initial={{ opacity: 0, scale: 0.9, y: 30 }}
+                            animate={{ opacity: 1, scale: 1, y: 0 }}
+                            exit={{ opacity: 0, scale: 0.9 }}
+                            transition={{ type: 'spring', damping: 22 }}
+                            className="bg-white rounded-3xl shadow-2xl w-full max-w-md overflow-hidden"
+                        >
+                            <div className="bg-gradient-to-r from-indigo-600 to-blue-600 px-6 py-5 text-white flex justify-between items-center">
+                                <div>
+                                    <h3 className="text-lg font-black">Complete Payment</h3>
+                                    <p className="text-sm text-white/80 mt-0.5">Scan QR and pay, then enter the reference</p>
+                                </div>
+                                <button onClick={() => setShowPaymentPopup(false)} className="text-white/70 hover:text-white p-1 rounded-lg hover:bg-white/10">
+                                    <XMarkIcon className="w-6 h-6" />
+                                </button>
+                            </div>
+                            <div className="p-6 space-y-5">
+                                <div className="bg-blue-50 rounded-2xl p-4 flex items-center justify-between">
+                                    <div>
+                                        <div className="text-sm text-slate-500 font-medium">Order Total</div>
+                                        <div className="text-3xl font-black text-slate-900">₹{250 * plateQuantity}</div>
+                                        <div className="text-xs text-slate-400 mt-0.5">{plateQuantity}x QR Acrylic Stand</div>
+                                    </div>
+                                    <div className="text-4xl">💳</div>
+                                </div>
+                                <div className="flex flex-col items-center">
+                                    <p className="text-sm text-slate-500 font-semibold mb-3 text-center">Scan to pay via UPI</p>
+                                    <div className="bg-white p-3 rounded-2xl border-2 border-blue-100 shadow-inner inline-block">
+                                        <img
+                                            src={`https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=upi://pay?pa=7878002359@ptsbi%26pn=AmaanTanveer%26am=${250 * plateQuantity}%26cu=INR%26tn=RankBagQRStand`}
+                                            alt="Payment QR"
+                                            className="w-44 h-44 object-contain"
+                                        />
+                                    </div>
+                                    <p className="mt-2 text-xs text-slate-400 font-mono">7878002359@ptsbi</p>
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-bold text-slate-700 mb-2">
+                                        UPI Transaction ID <span className="text-red-500">*</span>
+                                    </label>
+                                    <input
+                                        type="text"
+                                        value={upiReference}
+                                        onChange={(e) => setUpiReference(e.target.value)}
+                                        placeholder="e.g. 421234567890"
+                                        className="w-full px-4 py-3 rounded-xl border-2 border-slate-200 focus:border-blue-500 focus:outline-none transition-colors font-mono text-sm"
+                                    />
+                                    <p className="text-xs text-slate-400 mt-1.5">Found in your UPI app after payment</p>
+                                </div>
+                                <button
+                                    disabled={plateOrderStatus === 'processing'}
+                                    onClick={async () => {
+                                        if (!upiReference.trim()) { alert('Please enter the UPI reference number.'); return; }
+                                        setPlateOrderStatus('processing');
+                                        const result = await addQROrder({
+                                            business_id: businessData.id,
+                                            business_name: businessData.name,
+                                            plate_number: String(Math.floor(100 + Math.random() * 900)) + '-' + String(Math.floor(100 + Math.random() * 900)) + '-' + String(Math.floor(100 + Math.random() * 900)),
+                                            address: plateAddress,
+                                            design_info: {
+                                                name: qrDesigns[activeDesign]?.name || 'Custom',
+                                                colorCode: qrDesigns[activeDesign]?.color || '#3b82f6',
+                                                details: qrDesigns[activeDesign]?.description || '',
+                                                quantity: plateQuantity,
+                                                total_price: 250 * plateQuantity,
+                                                upi_reference: upiReference.trim()
+                                            }
+                                        });
+                                        if (result.success) {
+                                            setShowPaymentPopup(false);
+                                            setUpiReference('');
+                                            loadAllOrders();
+                                            setTimeout(() => setPlateOrderStatus('success'), 800);
+                                        } else {
+                                            alert('Order failed: ' + result.error);
+                                            setPlateOrderStatus('idle');
+                                        }
+                                    }}
+                                    className="w-full py-4 bg-gradient-to-r from-green-500 to-emerald-600 text-white font-black rounded-2xl shadow-lg shadow-green-500/30 hover:shadow-green-500/50 transition-all flex items-center justify-center gap-3 disabled:opacity-70 disabled:cursor-not-allowed text-base"
+                                >
+                                    {plateOrderStatus === 'processing' ? (
+                                        <><div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div> Placing Order...</>
+                                    ) : (
+                                        <><CheckCircleIcon className="w-6 h-6" /> I have Paid &mdash; Submit Order</>
+                                    )}
+                                </button>
+                                <p className="text-center text-xs text-slate-400">
+                                    Order status updates after payment verification by our team.
+                                </p>
+                            </div>
+                        </motion.div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
+
+
         </div >
     );
 }
+

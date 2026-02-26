@@ -1,294 +1,292 @@
-import { useState } from 'react';
-import { motion } from 'framer-motion';
+import { useState, useEffect } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { getAllClients } from '../lib/supabase';
 import {
     UserGroupIcon,
     GiftIcon,
     ChartBarIcon,
     CurrencyRupeeIcon,
-    ShareIcon,
-    EnvelopeIcon,
-    LinkIcon,
     CheckCircleIcon,
     SparklesIcon,
-    TrophyIcon
+    TrophyIcon,
+    LinkIcon,
+    XMarkIcon,
+    FireIcon
 } from '@heroicons/react/24/outline';
 
 export default function Referrals() {
-    const [referralCode] = useState('KAITEN-' + Math.random().toString(36).substr(2, 8).toUpperCase());
-    const [copiedCode, setCopiedCode] = useState(false);
-    const [copiedLink, setCopiedLink] = useState(false);
+    const [clients, setClients] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [selectedReferral, setSelectedReferral] = useState(null);
 
-    // Mock referral data - In production, this would come from backend
-    const referralStats = {
-        totalReferrals: 12,
-        activeClients: 8,
-        pendingSignups: 4,
-        totalEarnings: 24000,
-        pendingEarnings: 8000
-    };
+    useEffect(() => {
+        loadClients();
+    }, []);
 
-    const referralHistory = [
-        { id: 1, name: 'Raj Salon & Spa', status: 'Active', date: '2024-01-15', earnings: 3000, plan: 'Annual' },
-        { id: 2, name: 'Pizza Corner', status: 'Active', date: '2024-01-20', earnings: 2000, plan: 'Monthly' },
-        { id: 3, name: 'Fitness Hub Pro', status: 'Active', date: '2024-02-01', earnings: 5000, plan: '3-Year' },
-        { id: 4, name: 'Beauty Lounge', status: 'Pending', date: '2024-02-05', earnings: 0, plan: 'Monthly' },
-        { id: 5, name: 'Tech Solutions', status: 'Active', date: '2024-02-10', earnings: 3000, plan: 'Annual' }
-    ];
-
-    const benefits = [
-        {
-            icon: <CurrencyRupeeIcon className="w-8 h-8" />,
-            title: '20% Commission',
-            description: 'Earn 20% of the first year subscription for every referral'
-        },
-        {
-            icon: <GiftIcon className="w-8 h-8" />,
-            title: 'Bonus Rewards',
-            description: 'Get special bonuses for every 5 successful referrals'
-        },
-        {
-            icon: <ChartBarIcon className="w-8 h-8" />,
-            title: 'Lifetime Earnings',
-            description: 'Continue earning from renewals and upgrades'
-        },
-        {
-            icon: <TrophyIcon className="w-8 h-8" />,
-            title: 'Leaderboard Prizes',
-            description: 'Monthly prizes for top referrers'
-        }
-    ];
-
-    const copyToClipboard = (text, type) => {
-        navigator.clipboard.writeText(text);
-        if (type === 'code') {
-            setCopiedCode(true);
-            setTimeout(() => setCopiedCode(false), 2000);
-        } else {
-            setCopiedLink(true);
-            setTimeout(() => setCopiedLink(false), 2000);
+    const loadClients = async () => {
+        try {
+            setLoading(true);
+            const { success, data } = await getAllClients();
+            if (success && data) {
+                setClients(data);
+            }
+        } catch (error) {
+            console.error("Failed to load clients for referrals:", error);
+        } finally {
+            setLoading(false);
         }
     };
 
-    const referralLink = `${window.location.origin}/signup?ref=${referralCode}`;
+    // Calculate Referral Logic
+    // 1. Every business has a referral_code (ideally). If missing, skip or label "None".
+    // 2. We find how many businesses have `referred_by === business.referral_code`.
+    // 3. That is the `referredClients` list.
+
+    // Group all referrers and who they referred
+    const referrers = clients.filter(c => c.referral_code).map(referrer => {
+        const referredList = clients.filter(c => c.referred_by === referrer.referral_code);
+        return {
+            ...referrer,
+            referredList,
+            earnings: referredList.length * 10 // e.g. 10 points per legit referral as defined
+        };
+    }).sort((a, b) => b.referredList.length - a.referredList.length);
+
+    // Filter out referrers who haven't referred anyone for a cleaner dashboard? 
+    // Or show everyone. User said: "Each and every referral code of every business should be listed there"
+    // So we list all referrers.
+
+    const totalReferrals = referrers.reduce((acc, curr) => acc + curr.referredList.length, 0);
 
     return (
-        <div className="space-y-8">
+        <div className="space-y-8 relative">
             {/* Header */}
             <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
-                className="card-gradient text-white"
+                className="bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 p-8 rounded-3xl text-white shadow-xl relative overflow-hidden"
             >
-                <div className="flex items-start gap-6">
-                    <div className="w-20 h-20 bg-white/20 backdrop-blur-lg rounded-2xl flex items-center justify-center flex-shrink-0">
-                        <UserGroupIcon className="w-12 h-12" />
+                {/* Abstract shape */}
+                <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full blur-3xl -mx-20 -my-20 pointer-events-none"></div>
+                <div className="flex items-start gap-6 relative z-10">
+                    <div className="w-20 h-20 bg-white/20 backdrop-blur-lg rounded-2xl flex items-center justify-center flex-shrink-0 shadow-inner">
+                        <TrophyIcon className="w-12 h-12 text-yellow-300" />
                     </div>
                     <div>
-                        <h2 className="text-3xl font-bold mb-3">Referral Program</h2>
-                        <p className="text-lg text-white/90">
-                            Earn rewards by referring businesses to Kaiten AI Review Platform
+                        <h2 className="text-3xl font-black mb-2 tracking-tight">Referral Management</h2>
+                        <p className="text-lg text-white/90 font-medium">
+                            Monitor affiliate growth, credit points, and network expansion.
                         </p>
                     </div>
                 </div>
             </motion.div>
 
             {/* Stats Grid */}
-            <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <motion.div
+                    initial={{ opacity: 0, scale: 0.9 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 flex items-center gap-4 hover:shadow-md transition-all"
+                >
+                    <div className="w-14 h-14 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center">
+                        <UserGroupIcon className="w-8 h-8" />
+                    </div>
+                    <div>
+                        <div className="text-3xl font-bold text-slate-900">{referrers.length}</div>
+                        <div className="text-slate-500 font-medium text-sm">Active Referral Codes</div>
+                    </div>
+                </motion.div>
+
                 <motion.div
                     initial={{ opacity: 0, scale: 0.9 }}
                     animate={{ opacity: 1, scale: 1 }}
                     transition={{ delay: 0.1 }}
-                    className="card text-center"
+                    className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 flex items-center gap-4 hover:shadow-md transition-all"
                 >
-                    <div className="text-3xl font-bold gradient-text mb-2">{referralStats.totalReferrals}</div>
-                    <div className="text-gray-600 text-sm font-medium">Total Referrals</div>
+                    <div className="w-14 h-14 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center">
+                        <SparklesIcon className="w-8 h-8" />
+                    </div>
+                    <div>
+                        <div className="text-3xl font-bold text-slate-900">{totalReferrals}</div>
+                        <div className="text-slate-500 font-medium text-sm">Total Businesses Added</div>
+                    </div>
                 </motion.div>
+
                 <motion.div
                     initial={{ opacity: 0, scale: 0.9 }}
                     animate={{ opacity: 1, scale: 1 }}
                     transition={{ delay: 0.2 }}
-                    className="card text-center"
+                    className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 flex items-center gap-4 hover:shadow-md transition-all"
                 >
-                    <div className="text-3xl font-bold text-green-600 mb-2">{referralStats.activeClients}</div>
-                    <div className="text-gray-600 text-sm font-medium">Active Clients</div>
-                </motion.div>
-                <motion.div
-                    initial={{ opacity: 0, scale: 0.9 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    transition={{ delay: 0.3 }}
-                    className="card text-center"
-                >
-                    <div className="text-3xl font-bold text-yellow-600 mb-2">{referralStats.pendingSignups}</div>
-                    <div className="text-gray-600 text-sm font-medium">Pending</div>
-                </motion.div>
-                <motion.div
-                    initial={{ opacity: 0, scale: 0.9 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    transition={{ delay: 0.4 }}
-                    className="card text-center"
-                >
-                    <div className="text-3xl font-bold text-purple-600 mb-2">₹{referralStats.totalEarnings.toLocaleString()}</div>
-                    <div className="text-gray-600 text-sm font-medium">Total Earned</div>
-                </motion.div>
-                <motion.div
-                    initial={{ opacity: 0, scale: 0.9 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    transition={{ delay: 0.5 }}
-                    className="card text-center"
-                >
-                    <div className="text-3xl font-bold text-cyan-600 mb-2">₹{referralStats.pendingEarnings.toLocaleString()}</div>
-                    <div className="text-gray-600 text-sm font-medium">Pending</div>
+                    <div className="w-14 h-14 rounded-xl bg-purple-50 text-purple-600 flex items-center justify-center">
+                        <CurrencyRupeeIcon className="w-8 h-8" />
+                    </div>
+                    <div>
+                        <div className="text-3xl font-bold text-slate-900">{totalReferrals * 10}</div>
+                        <div className="text-slate-500 font-medium text-sm">Total Points Distributed</div>
+                    </div>
                 </motion.div>
             </div>
 
-            {/* Referral Code & Link */}
-            <div className="grid md:grid-cols-2 gap-6">
-                <div className="card">
-                    <div className="flex items-center gap-3 mb-4">
-                        <LinkIcon className="w-6 h-6 text-purple-600" />
-                        <h3 className="text-xl font-bold">Your Referral Code</h3>
-                    </div>
-                    <div className="bg-gradient-to-br from-purple-50 to-cyan-50 p-4 rounded-xl mb-4">
-                        <code className="text-2xl font-bold gradient-text">{referralCode}</code>
-                    </div>
-                    <button
-                        onClick={() => copyToClipboard(referralCode, 'code')}
-                        className="btn btn-primary w-full"
-                    >
-                        {copiedCode ? (
-                            <>
-                                <CheckCircleIcon className="w-5 h-5" />
-                                Copied!
-                            </>
-                        ) : (
-                            <>
-                                <ShareIcon className="w-5 h-5" />
-                                Copy Code
-                            </>
-                        )}
-                    </button>
+            {/* Referral History / Master List */}
+            <div className="bg-white rounded-3xl shadow-sm border border-slate-100 overflow-hidden">
+                <div className="p-6 border-b border-slate-100">
+                    <h3 className="text-xl font-bold text-slate-900">All Referral Codes & Networks</h3>
                 </div>
 
-                <div className="card">
-                    <div className="flex items-center gap-3 mb-4">
-                        <EnvelopeIcon className="w-6 h-6 text-cyan-600" />
-                        <h3 className="text-xl font-bold">Referral Link</h3>
+                {loading ? (
+                    <div className="p-12 pl-6 flex justify-center text-slate-400">Loading referral networks...</div>
+                ) : referrers.length === 0 ? (
+                    <div className="p-12 pl-6 flex justify-center text-slate-400">No referral codes found in the system yet.</div>
+                ) : (
+                    <div className="overflow-x-auto">
+                        <table className="w-full">
+                            <thead className="bg-slate-50/50">
+                                <tr>
+                                    <th className="px-6 py-4 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">Business / Referrer</th>
+                                    <th className="px-6 py-4 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">Referral Code</th>
+                                    <th className="px-6 py-4 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">Points Earned</th>
+                                    <th className="px-6 py-4 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">Network Size</th>
+                                    <th className="px-6 py-4 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">Action</th>
+                                </tr>
+                            </thead>
+                            <tbody className="divide-y divide-slate-100">
+                                {referrers.map((referrer, idx) => (
+                                    <motion.tr
+                                        key={referrer.business_id || idx}
+                                        initial={{ opacity: 0 }}
+                                        animate={{ opacity: 1 }}
+                                        className="hover:bg-blue-50/30 transition-colors group"
+                                    >
+                                        <td className="px-6 py-4">
+                                            <div className="flex items-center gap-3">
+                                                <div className="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center text-xl shrink-0">
+                                                    {referrer.logo || '🏢'}
+                                                </div>
+                                                <div>
+                                                    <div className="font-bold text-slate-900">{referrer.business_name || 'Unnamed Business'}</div>
+                                                    <div className="text-xs text-slate-500">ID: {referrer.business_id}</div>
+                                                </div>
+                                            </div>
+                                        </td>
+                                        <td className="px-6 py-4">
+                                            <span className="inline-block px-3 py-1 bg-indigo-50 text-indigo-600 font-mono font-bold rounded-lg border border-indigo-100">
+                                                {referrer.referral_code}
+                                            </span>
+                                        </td>
+                                        <td className="px-6 py-4">
+                                            <div className="flex items-center gap-1.5 font-bold text-slate-700">
+                                                <FireIcon className="w-4 h-4 text-orange-500" />
+                                                {referrer.credit_points || referrer.earnings || 0} pts
+                                            </div>
+                                        </td>
+                                        <td className="px-6 py-4">
+                                            {referrer.referredList.length > 0 ? (
+                                                <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-green-50 text-green-700 font-bold rounded-full">
+                                                    {referrer.referredList.length} Referrals
+                                                </span>
+                                            ) : (
+                                                <span className="text-slate-400 text-sm font-medium">None yet</span>
+                                            )}
+                                        </td>
+                                        <td className="px-6 py-4">
+                                            <button
+                                                onClick={() => setSelectedReferral(referrer)}
+                                                disabled={referrer.referredList.length === 0}
+                                                className={`px-4 py-2 font-bold rounded-xl transition-all shadow-sm ${referrer.referredList.length > 0 ? 'bg-slate-900 text-white hover:bg-slate-800 hover:shadow-md' : 'bg-slate-100 text-slate-400 cursor-not-allowed'}`}
+                                            >
+                                                View Network
+                                            </button>
+                                        </td>
+                                    </motion.tr>
+                                ))}
+                            </tbody>
+                        </table>
                     </div>
-                    <div className="bg-gradient-to-br from-cyan-50 to-purple-50 p-4 rounded-xl mb-4 break-all">
-                        <code className="text-sm text-gray-700">{referralLink}</code>
-                    </div>
-                    <button
-                        onClick={() => copyToClipboard(referralLink, 'link')}
-                        className="btn btn-accent w-full"
-                    >
-                        {copiedLink ? (
-                            <>
-                                <CheckCircleIcon className="w-5 h-5" />
-                                Copied!
-                            </>
-                        ) : (
-                            <>
-                                <LinkIcon className="w-5 h-5" />
-                                Copy Link
-                            </>
-                        )}
-                    </button>
-                </div>
+                )}
             </div>
 
-            {/* Benefits */}
-            <div className="card">
-                <div className="flex items-center gap-3 mb-6">
-                    <SparklesIcon className="w-10 h-10 text-purple-600" />
-                    <h3 className="text-2xl font-bold">Referral Benefits</h3>
-                </div>
-                <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
-                    {benefits.map((benefit, index) => (
+            {/* Innovative Network Popup Modal */}
+            <AnimatePresence>
+                {selectedReferral && (
+                    <motion.div
+                        className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm"
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        onClick={() => setSelectedReferral(null)}
+                    >
                         <motion.div
-                            key={index}
-                            initial={{ opacity: 0, y: 20 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            transition={{ delay: index * 0.1 }}
-                            className="bg-gradient-to-br from-gray-50 to-white p-6 rounded-xl border-2 border-gray-100 hover:border-purple-200 transition-all"
+                            className="bg-white rounded-3xl w-full max-w-2xl overflow-hidden shadow-2xl"
+                            initial={{ scale: 0.9, y: 20 }}
+                            animate={{ scale: 1, y: 0 }}
+                            exit={{ scale: 0.9, y: 20 }}
+                            onClick={(e) => e.stopPropagation()}
                         >
-                            <div className="w-14 h-14 bg-gradient-to-br from-purple-500 to-cyan-600 rounded-xl flex items-center justify-center text-white mb-4">
-                                {benefit.icon}
-                            </div>
-                            <h4 className="font-bold text-lg mb-2">{benefit.title}</h4>
-                            <p className="text-gray-600 text-sm">{benefit.description}</p>
-                        </motion.div>
-                    ))}
-                </div>
-            </div>
-
-            {/* Referral History */}
-            <div className="card">
-                <h3 className="text-2xl font-bold mb-6">Referral History</h3>
-                <div className="overflow-x-auto">
-                    <table className="w-full">
-                        <thead className="bg-gray-50 border-b-2 border-gray-200">
-                            <tr>
-                                <th className="px-6 py-4 text-left text-sm font-semibold text-gray-700">Business Name</th>
-                                <th className="px-6 py-4 text-left text-sm font-semibold text-gray-700">Status</th>
-                                <th className="px-6 py-4 text-left text-sm font-semibold text-gray-700">Plan</th>
-                                <th className="px-6 py-4 text-left text-sm font-semibold text-gray-700">Sign-up Date</th>
-                                <th className="px-6 py-4 text-left text-sm font-semibold text-gray-700">Earnings</th>
-                            </tr>
-                        </thead>
-                        <tbody className="divide-y divide-gray-200">
-                            {referralHistory.map((referral, index) => (
-                                <motion.tr
-                                    key={referral.id}
-                                    initial={{ opacity: 0 }}
-                                    animate={{ opacity: 1 }}
-                                    transition={{ delay: index * 0.05 }}
-                                    className="hover:bg-gray-50"
+                            {/* Modal Header */}
+                            <div className="relative bg-gradient-to-r from-slate-900 to-indigo-900 p-8 text-white overflow-hidden">
+                                <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full blur-2xl -mr-16 -mt-16"></div>
+                                <button
+                                    className="absolute top-6 right-6 text-white/60 hover:text-white transition-colors p-1"
+                                    onClick={() => setSelectedReferral(null)}
                                 >
-                                    <td className="px-6 py-4 font-semibold">{referral.name}</td>
-                                    <td className="px-6 py-4">
-                                        <span className={`px-3 py-1 rounded-full text-sm font-semibold ${referral.status === 'Active'
-                                                ? 'bg-green-100 text-green-700'
-                                                : 'bg-yellow-100 text-yellow-700'
-                                            }`}>
-                                            {referral.status}
-                                        </span>
-                                    </td>
-                                    <td className="px-6 py-4 text-gray-600">{referral.plan}</td>
-                                    <td className="px-6 py-4 text-gray-600">{referral.date}</td>
-                                    <td className="px-6 py-4">
-                                        <span className={`font-bold ${referral.earnings > 0 ? 'text-green-600' : 'text-gray-400'
-                                            }`}>
-                                            ₹{referral.earnings.toLocaleString()}
-                                        </span>
-                                    </td>
-                                </motion.tr>
-                            ))}
-                        </tbody>
-                    </table>
-                </div>
-            </div>
+                                    <XMarkIcon className="w-8 h-8" />
+                                </button>
 
-            {/* How It Works */}
-            <div className="card bg-gradient-to-br from-purple-600 to-cyan-600 text-white">
-                <h3 className="text-2xl font-bold mb-6">How It Works</h3>
-                <div className="grid md:grid-cols-3 gap-6">
-                    <div className="bg-white/10 backdrop-blur-lg rounded-xl p-6 border border-white/20">
-                        <div className="w-12 h-12 bg-white/20 rounded-xl flex items-center justify-center text-2xl font-bold mb-4">1</div>
-                        <h4 className="font-bold text-lg mb-2">Share Your Link</h4>
-                        <p className="text-white/80 text-sm">Share your unique referral code or link with businesses</p>
-                    </div>
-                    <div className="bg-white/10 backdrop-blur-lg rounded-xl p-6 border border-white/20">
-                        <div className="w-12 h-12 bg-white/20 rounded-xl flex items-center justify-center text-2xl font-bold mb-4">2</div>
-                        <h4 className="font-bold text-lg mb-2">They Sign Up</h4>
-                        <p className="text-white/80 text-sm">When they subscribe using your code, you both benefit</p>
-                    </div>
-                    <div className="bg-white/10 backdrop-blur-lg rounded-xl p-6 border border-white/20">
-                        <div className="w-12 h-12 bg-white/20 rounded-xl flex items-center justify-center text-2xl font-bold mb-4">3</div>
-                        <h4 className="font-bold text-lg mb-2">Earn Rewards</h4>
-                        <p className="text-white/80 text-sm">Get 20% commission and continue earning from renewals</p>
-                    </div>
-                </div>
-            </div>
+                                <div className="flex items-center gap-4 relative z-10">
+                                    <div className="w-16 h-16 bg-white/20 rounded-2xl flex items-center justify-center text-3xl shadow-inner backdrop-blur-md">
+                                        {selectedReferral.logo || '🏢'}
+                                    </div>
+                                    <div>
+                                        <h3 className="text-xs font-bold uppercase tracking-wider text-indigo-300 mb-1">Referral Network For</h3>
+                                        <h2 className="text-2xl font-black">{selectedReferral.business_name}</h2>
+                                    </div>
+                                </div>
+                                <div className="mt-6 flex items-center gap-4">
+                                    <div className="px-4 py-2 bg-black/30 rounded-full text-sm font-medium border border-white/10 flex items-center gap-2">
+                                        Code: <span className="text-yellow-400 font-mono font-bold tracking-wider">{selectedReferral.referral_code}</span>
+                                    </div>
+                                    <div className="px-4 py-2 bg-black/30 rounded-full text-sm font-medium flex gap-2 border border-white/10">
+                                        Total Onboarded: <span className="font-bold text-emerald-400">{selectedReferral.referredList.length}</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Network Flow / List */}
+                            <div className="p-8 max-h-[60vh] overflow-y-auto bg-slate-50/50">
+                                <div className="space-y-4 relative before:absolute before:inset-0 before:ml-6 before:-translate-x-px md:before:mx-auto md:before:translate-x-0 before:h-full before:w-0.5 before:bg-gradient-to-b before:from-transparent before:via-slate-200 before:to-transparent">
+                                    {selectedReferral.referredList.map((referredClient, index) => (
+                                        <motion.div
+                                            key={referredClient.business_id || index}
+                                            initial={{ opacity: 0, x: -20 }}
+                                            animate={{ opacity: 1, x: 0 }}
+                                            transition={{ delay: index * 0.1 }}
+                                            className="relative flex items-center justify-between md:justify-normal md:odd:flex-row-reverse group is-active"
+                                        >
+                                            {/* Icon connecting the line */}
+                                            <div className="flex items-center justify-center w-4 h-4 rounded-full border-4 border-white bg-indigo-500 absolute left-6 md:left-1/2 -ml-2 md:-translate-x-1/2 shadow-sm"></div>
+
+                                            {/* Card box */}
+                                            <div className="w-[calc(100%-4rem)] md:w-[calc(50%-1.5rem)] ml-14 md:ml-0 p-4 rounded-2xl bg-white border border-slate-100 shadow-sm hover:shadow-md transition-all group-hover:-translate-y-1 duration-300 ease-in-out">
+                                                <div className="flex items-center gap-3 mb-2">
+                                                    <div className="text-2xl bg-slate-50 p-2 rounded-lg">{referredClient.logo || '🏢'}</div>
+                                                    <div>
+                                                        <h4 className="font-bold text-slate-800 text-sm">{referredClient.business_name}</h4>
+                                                        <span className="text-[10px] uppercase font-bold text-indigo-500 tracking-wider">New Client</span>
+                                                    </div>
+                                                </div>
+                                                <p className="text-xs text-slate-500">
+                                                    Joined: {new Date(referredClient.created_at || Date.now()).toLocaleDateString()}
+                                                </p>
+                                            </div>
+                                        </motion.div>
+                                    ))}
+                                </div>
+                            </div>
+                        </motion.div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
         </div>
     );
 }

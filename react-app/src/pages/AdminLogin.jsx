@@ -7,7 +7,7 @@ import Logo from '../components/common/Logo';
 export default function AdminLogin() {
     const navigate = useNavigate();
     const [formData, setFormData] = useState({
-        email: 'admin@kaitensoftware.com',
+        email: 'admin@rankbag.com',
         password: 'admin123'
     });
     const [error, setError] = useState('');
@@ -21,7 +21,7 @@ export default function AdminLogin() {
         // Simulate API call
         setTimeout(() => {
             // Simple authentication (in production, use proper backend)
-            if (formData.email === 'admin@kaitensoftware.com' && formData.password === 'admin123') {
+            if (formData.email === 'admin@rankbag.com' && formData.password === 'admin123') {
                 sessionStorage.setItem('adminLoggedIn', 'true');
                 navigate('/admin/dashboard');
             } else {
@@ -122,7 +122,7 @@ export default function AdminLogin() {
                                         value={formData.email}
                                         onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                                         className="w-full px-4 py-4 pl-12 rounded-xl border-2 border-gray-200 focus:border-indigo-500 focus:outline-none transition-all text-gray-900 placeholder-gray-400"
-                                        placeholder="admin@kaitensoftware.com"
+                                        placeholder="admin@rankbag.com"
                                         required
                                     />
                                     <UserIcon className="w-5 h-5 text-gray-400 absolute left-4 top-1/2 -translate-y-1/2" />
@@ -179,7 +179,7 @@ export default function AdminLogin() {
                         <div className="mt-8 p-4 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl border border-blue-100">
                             <p className="text-sm font-semibold text-gray-700 mb-2">Demo Credentials:</p>
                             <div className="font-mono text-sm bg-white px-4 py-3 rounded-lg border border-gray-200">
-                                <p className="text-gray-600">Email: <span className="text-gray-900 font-semibold">admin@kaitensoftware.com</span></p>
+                                <p className="text-gray-600">Email: <span className="text-gray-900 font-semibold">admin@rankbag.com</span></p>
                                 <p className="text-gray-600">Password: <span className="text-gray-900 font-semibold">admin123</span></p>
                             </div>
                         </div>

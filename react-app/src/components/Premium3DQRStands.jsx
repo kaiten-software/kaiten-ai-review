@@ -1,4 +1,5 @@
 import React from 'react';
+import QRCode from 'react-qr-code';
 import { StarIcon, HeartIcon, SparklesIcon } from '@heroicons/react/24/solid';
 
 export const Premium3DQRStands = ({ activeDesign, qrCodeUrl, businessData }) => {
@@ -88,11 +89,14 @@ export const Premium3DQRStands = ({ activeDesign, qrCodeUrl, businessData }) => 
                                     {/* QR Code Container - HD */}
                                     <div className="relative bg-white p-2 rounded-xl border-[2px] shadow-md"
                                         style={{ borderColor: accentColor }}>
-                                        <img
-                                            src={qrCodeUrl}
-                                            alt="Scan to Review"
-                                            className="w-28 h-28 object-contain"
+                                        <QRCode
+                                            value={qrCodeUrl}
+                                            size={112} // w-28 = 112px
+                                            level="H" // High error correction
+                                            fgColor={accentColor}
                                             style={{
+                                                width: '112px',
+                                                height: '112px',
                                                 imageRendering: 'crisp-edges',
                                                 WebkitImageRendering: 'crisp-edges'
                                             }}
@@ -133,7 +137,7 @@ export const Premium3DQRStands = ({ activeDesign, qrCodeUrl, businessData }) => 
                             </div>
                         </div>
 
-                        {/* BOTTOM SECTION - Kaiten Branding */}
+                        {/* BOTTOM SECTION - RankBag Branding */}
                         <div className="relative px-4 py-3 text-center" style={{ background: bottomGradient }}>
                             <div className="flex items-center justify-center gap-1 mb-0.5">
                                 <SparklesIcon className="w-2.5 h-2.5 text-yellow-400" />
@@ -143,7 +147,7 @@ export const Premium3DQRStands = ({ activeDesign, qrCodeUrl, businessData }) => 
                                         letterSpacing: '0.15em',
                                         WebkitFontSmoothing: 'antialiased'
                                     }}>
-                                    KAITEN
+                                    RankBag
                                 </h3>
                                 <SparklesIcon className="w-2.5 h-2.5 text-yellow-400" />
                             </div>
@@ -151,8 +155,8 @@ export const Premium3DQRStands = ({ activeDesign, qrCodeUrl, businessData }) => 
                                 style={{ letterSpacing: '0.25em' }}>
                                 AI REVIEW
                             </p>
-                            <p className="text-white/70 text-[7px] font-semibold">
-                                Powered by AI
+                            <p className="text-white/70 text-[6px] font-semibold mt-0.5 tracking-wide">
+                                Powered by Kaiten Software
                             </p>
                         </div>
                     </div>

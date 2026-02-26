@@ -19,7 +19,7 @@ export default function AboutUs() {
                         <BuildingOfficeIcon className="w-12 h-12 text-white" />
                     </div>
                     <div>
-                        <h2 className="text-4xl font-bold mb-3 text-gray-900">About Kaiten Software</h2>
+                        <h2 className="text-4xl font-bold mb-3 text-gray-900">About RankBag</h2>
                         <p className="text-lg text-gray-700 leading-relaxed">
                             Leading IT company based in Jaipur, India, specializing in cutting-edge technology solutions
                             for businesses of all sizes. We combine innovation with expertise to deliver exceptional results.
@@ -79,12 +79,12 @@ export default function AboutUs() {
                     <div className="w-16 h-16 bg-gradient-to-br from-cyan-500 to-purple-600 rounded-2xl flex items-center justify-center shadow-lg">
                         <RocketLaunchIcon className="w-10 h-10 text-white" />
                     </div>
-                    <h3 className="text-3xl font-bold text-gray-900">Kaiten AI Review Platform</h3>
+                    <h3 className="text-3xl font-bold text-gray-900">RankBag AI Reviews</h3>
                 </div>
 
                 <div className="space-y-6">
                     <p className="text-gray-700 leading-relaxed text-lg">
-                        The <strong>Kaiten AI Review Platform</strong> is our flagship SaaS product designed to revolutionize
+                        <strong>RankBag</strong> is our flagship SaaS product designed to revolutionize
                         how businesses collect and manage customer reviews. Built with cutting-edge AI technology, this platform
                         helps businesses boost their online reputation effortlessly.
                     </p>
@@ -116,7 +116,7 @@ export default function AboutUs() {
                     <div className="bg-gradient-to-r from-blue-600 to-purple-600 text-white p-8 rounded-2xl shadow-xl">
                         <h4 className="font-bold text-2xl mb-3">Transform Your Business Reputation</h4>
                         <p className="text-white/95 text-lg leading-relaxed">
-                            Join hundreds of businesses using Kaiten AI Review Platform to build trust,
+                            Join hundreds of businesses using RankBag to build trust,
                             attract more customers, and grow their online presence with authentic, AI-generated reviews.
                         </p>
                     </div>
@@ -147,12 +147,12 @@ export default function AboutUs() {
                             <span>🌐</span> Website
                         </div>
                         <a
-                            href="https://kaitensoftware.com"
+                            href="https://rankbag.com"
                             target="_blank"
                             rel="noopener noreferrer"
                             className="text-cyan-400 hover:text-cyan-300 text-lg transition-colors inline-block"
                         >
-                            www.kaitensoftware.com
+                            www.rankbag.com
                         </a>
                     </div>
                 </div>

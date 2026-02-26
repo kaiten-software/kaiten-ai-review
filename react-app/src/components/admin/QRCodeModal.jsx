@@ -8,7 +8,7 @@ export default function QRCodeModal({ isOpen, onClose, business }) {
     if (!isOpen || !business) return null;
 
     const baseUrl = window.location.origin;
-    const reviewUrl = `${baseUrl}/business/${business.business_id || business.id}`;
+    const reviewUrl = `${baseUrl}/business/${business.business_id || business.id}/review`;
 
     const qrStyles = {
         modern: {
@@ -223,8 +223,8 @@ export default function QRCodeModal({ isOpen, onClose, business }) {
                                         whileTap={{ scale: 0.98 }}
                                         onClick={() => setSelectedStyle(key)}
                                         className={`p-4 rounded-2xl border-2 transition-all ${selectedStyle === key
-                                                ? 'border-purple-500 bg-purple-50 shadow-lg'
-                                                : 'border-gray-200 hover:border-gray-300 bg-white'
+                                            ? 'border-purple-500 bg-purple-50 shadow-lg'
+                                            : 'border-gray-200 hover:border-gray-300 bg-white'
                                             }`}
                                     >
                                         <div className={`w-12 h-12 rounded-xl bg-gradient-to-br ${style.gradient} mb-3 mx-auto`}></div>

@@ -176,9 +176,55 @@ export default function LeaveReviewPage() {
     const toggleFeeling = (feeling) => setFormData(p => ({ ...p, feelings: p.feelings.includes(feeling) ? p.feelings.filter(f => f !== feeling) : [...p.feelings, feeling] }));
     const handleRatingClick = (rating) => setFormData({ ...formData, rating });
 
+    const generateMediumReview = (data) => {
+        const { businessName, service, services, staff, qualities, feelings, additional } = data;
+        let review = `I had a fantastic experience at ${businessName || 'this place'}!`;
+
+        const serviceList = services && services.length > 0 ? services.join(' and ') : service;
+        const verb = (services && services.length > 1) ? 'were' : 'was';
+
+        if (serviceList) review += ` The ${serviceList} ${verb} exactly what I needed.`;
+        if (staff) review += ` ${staff} was incredibly helpful and professional.`;
+
+        if (qualities && qualities.length > 0) {
+            const selectedQualities = qualities.slice(0, 2).join(' and ');
+            review += ` The service was ${selectedQualities}.`;
+        }
+        if (additional) review += ` ${additional}`;
+        review += ` Highly recommend to anyone looking for quality service! ${data.rating} stars.`;
+        return review;
+    };
+
+    const generateConstructiveFeedback = (data) => {
+        const { service, services, additional, qualities } = data;
+        const serviceList = services && services.length > 0 ? services.join(' and ') : service;
+        let feedback = `I recently visited for ${serviceList || 'service'}.`;
+
+        if (qualities && qualities.length > 0) {
+            feedback += ` While I see potential, I think the ${qualities[0].toLowerCase()} aspect could be improved.`;
+        }
+        if (additional) feedback += ` ${additional}`;
+        else feedback += ` I wanted to share this feedback so you can improve for future customers.`;
+
+        return feedback;
+    };
+
     const handleSubmit = async (e) => {
         e.preventDefault();
         const businessIdForDb = displayBusiness.business_id || displayBusiness.id;
+
+        // Generate the exact AI review text *before* saving to DB
+        const generationData = {
+            businessName: displayBusiness.business_name || displayBusiness.name,
+            services: formData.services,
+            staff: formData.staff,
+            qualities: formData.qualities,
+            feelings: formData.feelings,
+            additional: formData.additional,
+            rating: formData.rating
+        };
+        const activeGeneratedReview = formData.rating > 3 ? generateMediumReview(generationData) : generateConstructiveFeedback(generationData);
+
         const reviewData = {
             business_id: businessIdForDb,
             business_name: displayBusiness.business_name || displayBusiness.name,
@@ -186,7 +232,7 @@ export default function LeaveReviewPage() {
             customer_email: '',
             customer_phone: null,
             rating: formData.rating,
-            review_text: formData.additional || 'Great experience!',
+            review_text: activeGeneratedReview,
             qualities: formData.qualities,
             feelings: formData.feelings,
             service_used: formData.services.length > 0 ? formData.services.join(', ') : null,
@@ -244,7 +290,7 @@ export default function LeaveReviewPage() {
             {/* Custom Navbar for Review Page with Back Button */}
             <div className="fixed top-0 left-0 right-0 h-20 bg-white/95 backdrop-blur-md z-40 border-b border-slate-100/50 px-4 md:px-8 flex items-center justify-between">
                 <button
-                    onClick={() => navigate('/')}
+                    onClick={() => navigate(`/business/${businessId}`)}
                     className="flex items-center gap-2 text-slate-600 hover:text-indigo-600 font-bold transition-colors group"
                 >
                     <div className="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center group-hover:bg-indigo-50 transition-colors">

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
     BuildingStorefrontIcon,
@@ -21,63 +21,210 @@ import {
     QrCodeIcon
 } from '@heroicons/react/24/solid';
 import Logo from '../components/common/Logo';
-import { uploadImage } from '../lib/supabase';
+import { uploadImage, addClient } from '../lib/supabase';
+import { getFSRByUserId } from '../lib/fsrApi';
+import { generateAIImage } from '../lib/aiImage';
 import { Premium3DQRStands } from '../components/Premium3DQRStands';
 
 export default function ClientOnboarding() {
     const navigate = useNavigate();
+    const [searchParams] = useSearchParams();
+    const fsrParam = searchParams.get('fsr');
     const [currentStep, setCurrentStep] = useState(1);
     const [isProcessing, setIsProcessing] = useState(false);
     const [tempQuality, setTempQuality] = useState('');
     const [isPaymentOverlayOpen, setIsPaymentOverlayOpen] = useState(false);
+    const [showSuccessPopup, setShowSuccessPopup] = useState(false);
+    const [generatingStates, setGeneratingStates] = useState({});
+    const [generationCounts, setGenerationCounts] = useState({});
+    const [promptInputs, setPromptInputs] = useState({});
+    const MAX_GENERATIONS = 2; // initial + 1 regenerate
+
+    // --- Smart AI Gallery State ---
+    const [aiPrompts, setAiPrompts] = useState(null); // { hero: string, gallery: string[] }
+    const [generatingAll, setGeneratingAll] = useState(false);
+    const [genProgress, setGenProgress] = useState([]); // 'idle'|'loading'|'done'|'error' per slot
+    const [extraGallery, setExtraGallery] = useState([]); // user-uploaded additional photos
+
+    /**
+     * Generates 5 highly efficient, credit-light prompts tailored to the business description.
+     * Prompts are kept short & specific so DALL-E resolves them quickly with minimum tokens.
+     */
+    const generateSmartPrompts = (description, businessName, businessType) => {
+        const base = description.trim() || businessName || businessType || 'local business';
+        const type = businessType || 'business';
+        // Hero prompt — wide, cinematic, low token usage
+        const hero = `Professional wide-angle exterior photo, ${type} called "${businessName || base}", bright natural light, clean signage, photorealistic`;
+        // 4 varied gallery prompts — contextual but concise
+        const gallery = [
+            `Warm interior ambiance shot, ${type}, cozy lighting, customers present, photorealistic`,
+            `Close-up hero product or service of ${base}, sharp focus, white background, commercial photography`,
+            `Staff smiling and serving customers at ${type}, candid, professional, bright environment`,
+            `Artistic overhead flat-lay of signature items from ${base}, clean minimal backdrop, studio light`
+        ];
+        return { hero, gallery };
+    };
+
+    // Auto-generate prompts when the user arrives on Step 3
+    useEffect(() => {
+        if (currentStep === 3 && !aiPrompts) {
+            const prompts = generateSmartPrompts(
+                formData.description,
+                formData.businessName,
+                formData.businessType
+            );
+            setAiPrompts(prompts);
+            setGenProgress(['idle', 'idle', 'idle', 'idle', 'idle']); // [hero, g0, g1, g2, g3]
+        }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [currentStep]);
+
+    const handleAIGeneration = async (keyPath, idx = null) => {
+        const stateKey = idx !== null ? `${keyPath}-${idx}` : keyPath;
+        const currentCount = generationCounts[stateKey] || 0;
+
+        let promptText = '';
+        if (keyPath === 'services' && idx !== null) {
+            promptText = formData.services[idx].name;
+            if (!promptText || !promptText.trim()) {
+                alert("Please enter a Service Name first. This will be used as the prompt.");
+                return;
+            }
+            promptText = `Professional high quality photo representing the service: ${promptText}. Clean, highly detailed, photorealistic.`;
+        } else {
+            promptText = promptInputs[stateKey];
+            if (!promptText || !promptText.trim()) {
+                alert("Please accurately describe the exact image you want first.");
+                return;
+            }
+        }
+
+        setGeneratingStates(prev => ({ ...prev, [stateKey]: true }));
+
+        try {
+            if (keyPath === 'heroImage') {
+                const heroUrl = await generateAIImage(`Professional main cover photo of: ${promptText}. Best lighting, wide angle, photorealistic.`);
+                if (heroUrl) {
+                    setFormData(prev => ({ ...prev, heroImage: heroUrl }));
+                    setGenerationCounts(prev => ({ ...prev, [stateKey]: currentCount + 1 }));
+                }
+            } else if (keyPath === 'gallery') {
+                const galleryPrompts = [
+                    `Interior view of: ${promptText}`,
+                    `Alternative perspective of: ${promptText}`,
+                    `Atmosphere and ambiance of: ${promptText}`,
+                    `Close up detail view of: ${promptText}`
+                ];
+
+                const galleryUrls = await Promise.all(galleryPrompts.map(p => generateAIImage(p)));
+                const validGalleryUrls = galleryUrls.filter(Boolean);
+
+                setFormData(prev => ({ ...prev, gallery: validGalleryUrls.slice(0, 4) }));
+                setGenerationCounts(prev => ({ ...prev, [stateKey]: currentCount + 1 }));
+                setPromptInputs(prev => ({ ...prev, [stateKey]: '' }));
+            } else {
+                const url = await generateAIImage(promptText);
+                if (url) {
+                    if (idx !== null) {
+                        updateItem(keyPath, idx, 'image', url);
+                    } else {
+                        setFormData(prev => ({ ...prev, [keyPath]: url }));
+                    }
+                    setGenerationCounts(prev => ({ ...prev, [stateKey]: currentCount + 1 }));
+                }
+            }
+        } finally {
+            setGeneratingStates(prev => ({ ...prev, [stateKey]: false }));
+        }
+    };
+
+    /** Generate all 5 AI images sequentially using the pre-built smart prompts */
+    const handleGenerateAll = async () => {
+        if (!aiPrompts) return;
+        setGeneratingAll(true);
+        setGenProgress(['loading', 'idle', 'idle', 'idle', 'idle']);
+
+        const allPrompts = [aiPrompts.hero, ...aiPrompts.gallery];
+        const results = [];
+
+        for (let i = 0; i < allPrompts.length; i++) {
+            setGenProgress(prev => {
+                const next = [...prev];
+                next[i] = 'loading';
+                return next;
+            });
+            try {
+                const url = await generateAIImage(allPrompts[i]);
+                results.push(url || null);
+                setGenProgress(prev => {
+                    const next = [...prev];
+                    next[i] = url ? 'done' : 'error';
+                    if (i + 1 < allPrompts.length) next[i + 1] = 'loading';
+                    return next;
+                });
+                // Update form data immediately as each image arrives
+                if (i === 0 && url) {
+                    setFormData(prev => ({ ...prev, heroImage: url }));
+                } else if (i > 0 && url) {
+                    setFormData(prev => ({
+                        ...prev,
+                        gallery: [...results.slice(1).filter(Boolean)]
+                    }));
+                }
+            } catch {
+                results.push(null);
+                setGenProgress(prev => {
+                    const next = [...prev];
+                    next[i] = 'error';
+                    if (i + 1 < allPrompts.length) next[i + 1] = 'loading';
+                    return next;
+                });
+            }
+        }
+        setGeneratingAll(false);
+    };
 
     // Comprehensive Form Data
     const [formData, setFormData] = useState({
+        // FSR Info (New)
+        fsrId: '',
+        fsrName: '',
+
         // Step 1: Basic Info
-        businessName: 'The Golden Spoon',
-        businessType: 'Restaurant',
-        tagline: 'Authentic flavors, unforgettable moments',
-        description: 'A premium dining experience serving the best Italian cuisine in the heart of the city.',
-        logo: '🍝',
+        businessName: '',
+        businessType: '',
+        tagline: '',
+        description: '',
+        logo: '',
+        referredBy: '',
 
         // Step 2: Contact & Location
-        email: 'contact@goldenspoon.com',
-        phone: '+91 98765 43210',
-        addressLine1: '123, Gourmet Street, Foodie Zone',
-        city: 'Mumbai',
-        state: 'Maharashtra',
-        zip: '400050',
-        country: 'India',
-        googleMapUrl: 'https://goo.gl/maps/example',
+        email: '',
+        phone: '',
+        addressLine1: '',
+        city: '',
+        state: '',
+        zip: '',
+        country: '',
+        googleMapUrl: '',
 
         // Step 3: Visual Identity
-        heroImage: 'https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?auto=format&fit=crop&w=800&q=80',
-        gallery: [
-            'https://images.unsplash.com/photo-1559339352-11d035aa65de?auto=format&fit=crop&w=800&q=80',
-            'https://images.unsplash.com/photo-1544148103-0773bf10d330?auto=format&fit=crop&w=800&q=80',
-            'https://images.unsplash.com/photo-1590846406792-0adc7f938f1d?auto=format&fit=crop&w=800&q=80',
-            'https://images.unsplash.com/photo-1552566626-52f8b828add9?auto=format&fit=crop&w=800&q=80'
-        ],
+        heroImage: '',
+        gallery: [],
 
         // Step 4: Team & Services
-        teamMembers: [
-            { name: 'Marco Rossi', role: 'Head Chef', image: '' },
-            { name: 'Sarah Jones', role: 'Manager', image: '' }
-        ],
-        services: [
-            { name: 'Fine Dining', price: '₹1500', description: 'Full course meal with wine pairing', image: 'https://images.unsplash.com/photo-1559339352-11d035aa65de?auto=format&fit=crop&w=800&q=80' },
-            { name: 'Luxury Catering', price: '₹10000', description: 'Premium catering for events and parties', image: 'https://images.unsplash.com/photo-1555244162-803834f70033?auto=format&fit=crop&w=800&q=80' },
-            { name: 'Private Events', price: '₹5000', description: 'Exclusive booking for special occasions', image: 'https://images.unsplash.com/photo-1519225468359-2996bc140aaa?auto=format&fit=crop&w=800&q=80' }
-        ],
+        teamMembers: [],
+        services: [],
 
         // Step 5: Brand Voice
-        qualities: ['Elegant', 'Delicious', 'Authentic'],
-        socialMedia: [{ platform: 'Instagram', url: 'https://instagram.com/goldenspoon' }],
+        qualities: [],
+        socialMedia: [{ platform: 'Instagram', url: '' }],
+        googleReviewUrl: '',
 
         // Step 6: Plan & Payment
         plan: 'premium',
         paymentMethod: 'upi',
-        upiId: 'goldenspoon@upi',
+        utrNumber: '',
         cardNumber: '',
         cardExpiry: '',
         cardCvv: '',
@@ -92,13 +239,30 @@ export default function ClientOnboarding() {
         window.scrollTo({ top: 0, behavior: 'smooth' });
     }, [currentStep]);
 
+    // Fetch FSR Details if param exists
+    useEffect(() => {
+        const loadFSR = async () => {
+            if (fsrParam) {
+                const result = await getFSRByUserId(fsrParam);
+                if (result.success) {
+                    setFormData(prev => ({
+                        ...prev,
+                        fsrId: result.data.user_id,
+                        fsrName: result.data.name
+                    }));
+                }
+            }
+        };
+        loadFSR();
+    }, [fsrParam]);
+
     // Validation Logic
     const validateStep = (step) => {
         switch (step) {
             case 1: // Basics
-                return formData.businessName && formData.businessType;
+                return formData.businessName && formData.businessType && formData.email;
             case 2: // Location
-                return formData.email && formData.phone && formData.addressLine1 && formData.city;
+                return formData.phone && formData.addressLine1 && formData.city;
             case 3: // Visuals
                 return true; // Optional
             case 4: // Team/Services
@@ -197,9 +361,61 @@ export default function ClientOnboarding() {
     };
 
     const handleSubmit = async () => {
-        // PROTOTYPE ONLY: Show Payment Processing Screen
+        if (!formData.utrNumber || formData.utrNumber.trim().length < 4) {
+            alert('Please enter a valid UPI Transaction / UTR Number.');
+            return;
+        }
+        setIsProcessing(true);
         setIsPaymentOverlayOpen(true);
-        // Payment processing simulator - stays on buffering screen as requested
+
+        try {
+            const businessId = formData.businessName.toLowerCase().replace(/[^a-z0-9]/g, '-');
+            const fullAddress = [formData.addressLine1, formData.city, formData.state, formData.zip].filter(Boolean).join(', ');
+
+            const clientPayload = {
+                business_id: businessId,
+                business_name: formData.businessName,
+                email: formData.email,
+                phone: formData.phone,
+                address: fullAddress,
+                hero_image: formData.heroImage || 'https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=1920&h=1080&fit=crop',
+                logo: formData.logo || '🏢',
+                tagline: formData.tagline || '',
+                description: formData.description || '',
+                google_business_url: formData.googleReviewUrl,
+                business_type: formData.businessType,
+                services: formData.services,
+                staff: formData.teamMembers,
+                qualities: formData.qualities,
+                feelings: [],
+                search_keywords: [],
+                gallery: [...(formData.gallery || []), ...extraGallery],
+                referral_code: businessId.substring(0, 8).toUpperCase() + Math.floor(100 + Math.random() * 900),
+                referred_by: formData.referredBy || null,
+                credit_points: 0,
+                subscription_status: 'inactive',
+                utr_number: formData.utrNumber.trim()
+            };
+
+            const result = await addClient(clientPayload);
+
+            if (!result.success && !result.error?.includes('duplicate key')) {
+                throw new Error(result.error || 'Failed to submit your application');
+            }
+
+            // Show success popup after short delay
+            setTimeout(() => {
+                setIsPaymentOverlayOpen(false);
+                setIsProcessing(false);
+                setShowSuccessPopup(true);
+            }, 2500);
+
+        } catch (error) {
+            console.error('Registration error:', error);
+            alert('Submission Failed: ' + error.message);
+            setIsPaymentOverlayOpen(false);
+            setIsProcessing(false);
+        }
     };
 
     const steps = [
@@ -267,6 +483,21 @@ export default function ClientOnboarding() {
                                         <p className="text-gray-500 mt-1">Let's start with your business identity.</p>
                                     </div>
 
+                                    {formData.fsrId && (
+                                        <div className="bg-blue-50 border border-blue-100 rounded-xl p-4 flex items-center gap-4 animate-pulse-once">
+                                            <div className="bg-white p-3 rounded-full shadow-sm text-blue-600">
+                                                <UserGroupIcon className="w-6 h-6" />
+                                            </div>
+                                            <div>
+                                                <p className="text-xs font-bold text-blue-600 uppercase tracking-wider mb-0.5">Referred By FSR</p>
+                                                <div className="font-bold text-gray-900 text-lg flex items-center gap-2">
+                                                    {formData.fsrName || 'FSR Agent'}
+                                                    <span className="bg-blue-200 text-blue-800 text-xs px-2 py-0.5 rounded-md font-mono">{formData.fsrId}</span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    )}
+
                                     <div className="grid md:grid-cols-2 gap-8">
                                         <div className="space-y-6">
                                             <div>
@@ -293,6 +524,16 @@ export default function ClientOnboarding() {
                                                 </select>
                                             </div>
                                             <div>
+                                                <label className="block text-sm font-bold text-gray-700 mb-2">Email Address *</label>
+                                                <input
+                                                    type="email"
+                                                    value={formData.email}
+                                                    onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                                                    className="w-full px-5 py-4 rounded-xl border-2 border-gray-100 bg-gray-50 focus:border-blue-500 focus:bg-white focus:outline-none transition-all"
+                                                    placeholder="contact@example.com"
+                                                />
+                                            </div>
+                                            <div>
                                                 <label className="block text-sm font-bold text-gray-700 mb-2">Tagline</label>
                                                 <input
                                                     type="text"
@@ -302,18 +543,36 @@ export default function ClientOnboarding() {
                                                     placeholder="e.g. Authentic Italian Flavors"
                                                 />
                                             </div>
+                                            <div>
+                                                <label className="block text-sm font-bold text-gray-700 mb-2">Referral Code (Optional)</label>
+                                                <input
+                                                    type="text"
+                                                    value={formData.referredBy}
+                                                    onChange={(e) => setFormData({ ...formData, referredBy: e.target.value })}
+                                                    className="w-full px-5 py-4 rounded-xl border-2 border-gray-100 bg-gray-50 focus:border-blue-500 focus:bg-white focus:outline-none transition-all uppercase"
+                                                    placeholder="e.g. PIZ0X3A"
+                                                />
+                                            </div>
                                         </div>
 
                                         <div className="space-y-6">
                                             <div>
-                                                <label className="block text-sm font-bold text-gray-700 mb-2">Description</label>
+                                                <label className="block text-sm font-bold text-gray-700 mb-1">Business Description <span className="text-blue-600">*</span></label>
+                                                <p className="text-xs text-purple-600 font-semibold mb-2 flex items-center gap-1">
+                                                    <SparklesIcon className="w-3.5 h-3.5" />
+                                                    This powers your AI Gallery — the better you describe, the better the images!
+                                                </p>
                                                 <textarea
                                                     value={formData.description}
-                                                    onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                                                    className="w-full px-5 py-4 rounded-xl border-2 border-gray-100 bg-gray-50 focus:border-blue-500 focus:bg-white focus:outline-none transition-all"
-                                                    rows="4"
-                                                    placeholder="Tell us about your business..."
+                                                    onChange={(e) => {
+                                                        setFormData({ ...formData, description: e.target.value });
+                                                        setAiPrompts(null);
+                                                    }}
+                                                    className="w-full px-5 py-4 rounded-xl border-2 border-blue-100 bg-blue-50 focus:border-blue-500 focus:bg-white focus:outline-none transition-all"
+                                                    rows="5"
+                                                    placeholder="e.g. We are a cozy pizza corner in Mumbai, famous for wood-fired Neapolitan pizzas, hand-tossed daily using fresh ingredients. Family-friendly with a warm Italian ambiance..."
                                                 ></textarea>
+                                                <p className="text-xs text-gray-400 mt-1 text-right">{formData.description.length} chars — aim for 50+ for best results</p>
                                             </div>
                                             <div>
                                                 <label className="block text-sm font-bold text-gray-700 mb-2">Logo Emoji</label>
@@ -344,16 +603,6 @@ export default function ClientOnboarding() {
 
                                     <div className="grid md:grid-cols-2 gap-8">
                                         <div className="space-y-6">
-                                            <div>
-                                                <label className="block text-sm font-bold text-gray-700 mb-2">Email Address *</label>
-                                                <input
-                                                    type="email"
-                                                    value={formData.email}
-                                                    onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                                                    className="w-full px-5 py-4 rounded-xl border-2 border-gray-100 bg-gray-50 focus:border-blue-500 focus:bg-white focus:outline-none transition-all"
-                                                    placeholder="contact@example.com"
-                                                />
-                                            </div>
                                             <div>
                                                 <label className="block text-sm font-bold text-gray-700 mb-2">Phone Number *</label>
                                                 <input
@@ -429,118 +678,196 @@ export default function ClientOnboarding() {
                                 <motion.div key="step3" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="space-y-8">
                                     <div className="border-b pb-4">
                                         <h2 className="text-3xl font-bold text-gray-900">Visual Identity</h2>
-                                        <p className="text-gray-500 mt-1">Make your page pop with great images.</p>
+                                        <p className="text-gray-500 mt-1">AI-powered images crafted from your business description.</p>
                                     </div>
 
-                                    <div className="space-y-8">
-                                        {/* Hero Image */}
-                                        <div className="bg-gray-50 p-6 rounded-2xl border border-gray-100">
-                                            <label className="block text-lg font-bold text-gray-900 mb-4">Hero Image</label>
+                                    {/* Info banner if no description */}
+                                    {!formData.description.trim() && (
+                                        <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 flex items-start gap-3">
+                                            <SparklesIcon className="w-5 h-5 text-amber-500 flex-shrink-0 mt-0.5" />
+                                            <p className="text-sm text-amber-800 font-medium">
+                                                Tip: Go back to Step 1 and fill in a detailed <strong>Business Description</strong> to get better AI prompts and images!
+                                            </p>
+                                        </div>
+                                    )}
 
-                                            <div className="flex flex-col md:flex-row gap-6">
-                                                {/* Preview Area */}
-                                                <div className="w-full md:w-1/3 aspect-video bg-gray-200 rounded-xl overflow-hidden relative group border-2 border-dashed border-gray-300 flex items-center justify-center">
-                                                    {formData.heroImage ? (
-                                                        <>
-                                                            <img src={formData.heroImage} alt="Hero" className="w-full h-full object-cover" />
-                                                            <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                                                                <button
-                                                                    onClick={() => setFormData({ ...formData, heroImage: '' })}
-                                                                    className="bg-red-500 text-white p-2 rounded-full"
-                                                                >
-                                                                    <TrashIcon className="w-5 h-5" />
-                                                                </button>
-                                                            </div>
-                                                        </>
-                                                    ) : (
-                                                        <div className="text-center p-4">
-                                                            <PhotoIcon className="w-10 h-10 text-gray-400 mx-auto mb-2" />
-                                                            <p className="text-xs text-gray-500">No image selected</p>
-                                                        </div>
-                                                    )}
-                                                </div>
-
-                                                {/* Input Area */}
-                                                <div className="flex-1 space-y-4">
-                                                    <div>
-                                                        <label className="block text-sm font-semibold text-gray-700 mb-2">Upload from Device</label>
-                                                        <label className="flex items-center gap-3 w-full px-5 py-4 rounded-xl border-2 border-dashed border-blue-200 bg-blue-50 hover:bg-blue-100 cursor-pointer transition-colors group">
-                                                            <div className="bg-white p-2 rounded-full shadow-sm text-blue-600 group-hover:scale-110 transition-transform">
-                                                                <ArrowUpTrayIcon className="w-6 h-6" />
-                                                            </div>
-                                                            <div>
-                                                                <span className="font-bold text-blue-900 block">Click to Upload</span>
-                                                                <span className="text-xs text-blue-600">Supports JPG, PNG (Max 5MB)</span>
-                                                            </div>
-                                                            <input
-                                                                type="file"
-                                                                accept="image/*"
-                                                                className="hidden"
-                                                                onChange={(e) => handleFileUpload(e.target.files[0], (url) => setFormData(prev => ({ ...prev, heroImage: url })))}
-                                                            />
-                                                        </label>
-                                                    </div>
-
-                                                    <div className="relative">
-                                                        <div className="absolute inset-0 flex items-center">
-                                                            <div className="w-full border-t border-gray-300"></div>
-                                                        </div>
-                                                        <div className="relative flex justify-center text-sm">
-                                                            <span className="px-2 bg-gray-50 text-gray-500 font-medium">OR via URL</span>
-                                                        </div>
-                                                    </div>
-
-                                                    <div>
-                                                        <input
-                                                            type="text"
-                                                            value={formData.heroImage}
-                                                            onChange={(e) => setFormData({ ...formData, heroImage: e.target.value })}
-                                                            className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-blue-500 focus:outline-none transition-all text-sm"
-                                                            placeholder="Paste image URL (e.g. Unsplash)..."
-                                                        />
-                                                    </div>
-                                                </div>
-                                            </div>
+                                    {/* ---------- HERO IMAGE SECTION ---------- */}
+                                    <div className="bg-gradient-to-br from-slate-900 to-indigo-900 rounded-2xl p-6 border border-indigo-800 shadow-xl">
+                                        <div className="flex items-center gap-2 mb-4">
+                                            <SparklesIcon className="w-5 h-5 text-indigo-300" />
+                                            <h3 className="text-white font-bold text-lg">Hero Image</h3>
+                                            <span className="ml-auto text-xs text-indigo-300 bg-indigo-800/60 px-2 py-0.5 rounded-full">Auto-generated prompt</span>
                                         </div>
 
-                                        {/* Gallery Images */}
-                                        <div>
-                                            <label className="block text-lg font-bold text-gray-900 mb-4">Gallery Images</label>
-                                            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                                                {/* Existing Images */}
-                                                {formData.gallery.map((img, idx) => (
+                                        <div className="flex flex-col md:flex-row gap-5">
+                                            {/* Preview */}
+                                            <div className="w-full md:w-2/5 aspect-video rounded-xl overflow-hidden relative border-2 border-indigo-700 bg-slate-800 flex items-center justify-center group">
+                                                {genProgress[0] === 'loading' ? (
+                                                    <div className="flex flex-col items-center gap-3">
+                                                        <div className="w-10 h-10 border-4 border-indigo-400 border-t-transparent rounded-full animate-spin"></div>
+                                                        <p className="text-indigo-300 text-sm font-medium">Generating hero image...</p>
+                                                    </div>
+                                                ) : formData.heroImage ? (
+                                                    <>
+                                                        <img src={formData.heroImage} alt="Hero" className="w-full h-full object-cover" />
+                                                        <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
+                                                            <button onClick={() => setFormData(prev => ({ ...prev, heroImage: '' }))} className="bg-red-500 text-white p-2 rounded-full hover:bg-red-600">
+                                                                <TrashIcon className="w-4 h-4" />
+                                                            </button>
+                                                        </div>
+                                                        {genProgress[0] === 'done' && (
+                                                            <div className="absolute bottom-2 left-2 bg-green-500 text-white text-xs px-2 py-0.5 rounded-full font-bold flex items-center gap-1">
+                                                                <CheckCircleIcon className="w-3 h-3" /> Generated
+                                                            </div>
+                                                        )}
+                                                    </>
+                                                ) : (
+                                                    <div className="text-center text-slate-400 p-4">
+                                                        <PhotoIcon className="w-10 h-10 mx-auto mb-2 opacity-40" />
+                                                        <p className="text-xs">Hero image will appear here</p>
+                                                    </div>
+                                                )}
+                                            </div>
+
+                                            {/* Prompt card + manual upload */}
+                                            <div className="flex-1 flex flex-col gap-3">
+                                                {/* Read-only prompt */}
+                                                <div className="bg-indigo-800/40 border border-indigo-600 rounded-xl p-3">
+                                                    <p className="text-xs text-indigo-300 font-bold uppercase tracking-wider mb-1">AI Prompt (auto-crafted)</p>
+                                                    <p className="text-slate-200 text-sm leading-relaxed">{aiPrompts?.hero || '...'}</p>
+                                                </div>
+                                                {/* Manual upload for hero */}
+                                                <label className="flex items-center justify-center gap-2 p-3 rounded-xl border-2 border-dashed border-indigo-600 bg-indigo-800/20 hover:bg-indigo-800/40 cursor-pointer transition-colors text-indigo-300 text-sm font-semibold">
+                                                    <ArrowUpTrayIcon className="w-4 h-4" /> Upload your own hero photo instead
+                                                    <input type="file" accept="image/*" className="hidden" onChange={(e) => handleFileUpload(e.target.files[0], (url) => { setFormData(prev => ({ ...prev, heroImage: url })); setGenProgress(prev => { const n = [...prev]; n[0] = 'done'; return n; }); })} />
+                                                </label>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    {/* ---------- GALLERY SECTION ---------- */}
+                                    <div className="bg-gray-50 rounded-2xl p-6 border border-gray-200 space-y-5">
+                                        <div className="flex items-center gap-2">
+                                            <PhotoIcon className="w-5 h-5 text-purple-600" />
+                                            <h3 className="font-bold text-gray-900 text-lg">Gallery (4 AI Images)</h3>
+                                            <span className="ml-auto text-xs text-purple-600 bg-purple-100 px-2 py-0.5 rounded-full">Auto-generated prompts</span>
+                                        </div>
+
+                                        {/* 4 prompt + image cards */}
+                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                            {[0, 1, 2, 3].map((i) => (
+                                                <div key={i} className="bg-white rounded-xl border border-gray-200 overflow-hidden shadow-sm">
+                                                    {/* Image preview */}
+                                                    <div className="aspect-video bg-gray-100 relative flex items-center justify-center group">
+                                                        {genProgress[i + 1] === 'loading' ? (
+                                                            <div className="flex flex-col items-center gap-2">
+                                                                <div className="w-8 h-8 border-3 border-purple-500 border-t-transparent rounded-full animate-spin"></div>
+                                                                <p className="text-purple-500 text-xs font-medium">Generating...</p>
+                                                            </div>
+                                                        ) : formData.gallery[i] ? (
+                                                            <>
+                                                                <img src={formData.gallery[i]} alt={`Gallery ${i + 1}`} className="w-full h-full object-cover" />
+                                                                <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                                                                    <button
+                                                                        onClick={() => setFormData(prev => ({ ...prev, gallery: prev.gallery.filter((_, gi) => gi !== i) }))}
+                                                                        className="bg-red-500 text-white p-1.5 rounded-full hover:bg-red-600"
+                                                                    >
+                                                                        <TrashIcon className="w-4 h-4" />
+                                                                    </button>
+                                                                </div>
+                                                                {genProgress[i + 1] === 'done' && (
+                                                                    <div className="absolute bottom-1 left-1 bg-green-500 text-white text-xs px-1.5 py-0.5 rounded-full font-bold flex items-center gap-1">
+                                                                        <CheckCircleIcon className="w-3 h-3" /> Done
+                                                                    </div>
+                                                                )}
+                                                            </>
+                                                        ) : (
+                                                            <div className="text-center text-gray-300 p-3">
+                                                                <PhotoIcon className="w-8 h-8 mx-auto mb-1 opacity-40" />
+                                                                <p className="text-xs text-gray-400">Image {i + 1}</p>
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                    {/* Prompt chip */}
+                                                    <div className="p-3">
+                                                        <p className="text-xs text-purple-700 font-bold uppercase tracking-wider mb-1">Prompt {i + 1}</p>
+                                                        <p className="text-xs text-gray-600 leading-relaxed line-clamp-2">{aiPrompts?.gallery?.[i] || '...'}</p>
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+
+                                        {/* Generate All Button */}
+                                        {!generatingAll && !genProgress.every(s => s === 'done') && (
+                                            <button
+                                                onClick={(e) => { e.preventDefault(); handleGenerateAll(); }}
+                                                disabled={generatingAll}
+                                                className="w-full py-4 bg-gradient-to-r from-purple-600 to-indigo-600 text-white font-bold rounded-2xl shadow-lg hover:shadow-xl hover:from-purple-700 hover:to-indigo-700 transition-all flex items-center justify-center gap-3 text-base disabled:opacity-60"
+                                            >
+                                                <SparklesIcon className="w-5 h-5" />
+                                                Generate All 5 AI Images (1 Hero + 4 Gallery)
+                                            </button>
+                                        )}
+                                        {generatingAll && (
+                                            <div className="w-full py-4 bg-gradient-to-r from-purple-600/80 to-indigo-600/80 text-white font-bold rounded-2xl flex items-center justify-center gap-3 text-base">
+                                                <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                                                Generating images... ({genProgress.filter(s => s === 'done').length}/5 done)
+                                            </div>
+                                        )}
+                                        {!generatingAll && genProgress.every(s => s === 'done') && (
+                                            <div className="w-full py-3 bg-green-50 border border-green-200 text-green-700 font-bold rounded-2xl flex items-center justify-center gap-2 text-sm">
+                                                <CheckCircleIcon className="w-5 h-5" /> All 5 images generated successfully!
+                                            </div>
+                                        )}
+                                    </div>
+
+                                    {/* ---------- EXTRA UPLOAD SECTION ---------- */}
+                                    <div className="bg-white rounded-2xl p-5 border border-gray-200">
+                                        <div className="flex items-center justify-between mb-4">
+                                            <div>
+                                                <h3 className="font-bold text-gray-900">Add More Photos</h3>
+                                                <p className="text-xs text-gray-500 mt-0.5">Upload additional photos beyond the 5 AI-generated images</p>
+                                            </div>
+                                            <label className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-xl cursor-pointer font-bold text-sm transition-colors">
+                                                <PlusIcon className="w-4 h-4" /> Add Photo
+                                                <input
+                                                    type="file"
+                                                    accept="image/*"
+                                                    multiple
+                                                    className="hidden"
+                                                    onChange={(e) => {
+                                                        Array.from(e.target.files).forEach(file => {
+                                                            handleFileUpload(file, (url) => {
+                                                                setExtraGallery(prev => [...prev, url]);
+                                                            });
+                                                        });
+                                                    }}
+                                                />
+                                            </label>
+                                        </div>
+                                        {extraGallery.length > 0 ? (
+                                            <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-3">
+                                                {extraGallery.map((img, idx) => (
                                                     <div key={idx} className="relative group aspect-square">
-                                                        <img src={img} alt={`Gallery ${idx}`} className="w-full h-full object-cover rounded-xl shadow-sm border border-gray-100" />
+                                                        <img src={img} alt={`Extra ${idx}`} className="w-full h-full object-cover rounded-xl border border-gray-200" />
                                                         <button
-                                                            onClick={() => {
-                                                                const newGallery = formData.gallery.filter((_, i) => i !== idx);
-                                                                setFormData({ ...formData, gallery: newGallery });
-                                                            }}
-                                                            className="absolute top-2 right-2 bg-red-500 text-white p-1.5 rounded-full opacity-0 group-hover:opacity-100 transition-all shadow-lg hover:bg-red-600"
+                                                            onClick={() => setExtraGallery(prev => prev.filter((_, i) => i !== idx))}
+                                                            className="absolute top-1 right-1 bg-red-500 text-white p-1 rounded-full opacity-0 group-hover:opacity-100 transition-all"
                                                         >
-                                                            <TrashIcon className="w-4 h-4" />
+                                                            <TrashIcon className="w-3 h-3" />
                                                         </button>
                                                     </div>
                                                 ))}
-
-                                                {/* Add Button */}
-                                                <label className="aspect-square border-2 border-dashed border-gray-300 rounded-xl flex flex-col items-center justify-center text-gray-400 hover:border-blue-500 hover:text-blue-500 hover:bg-blue-50 transition-all cursor-pointer group">
-                                                    <div className="w-10 h-10 rounded-full bg-gray-100 group-hover:bg-white flex items-center justify-center mb-2 transition-colors">
-                                                        <PlusIcon className="w-6 h-6" />
-                                                    </div>
-                                                    <span className="font-semibold text-sm">Add Image</span>
-                                                    <input
-                                                        type="file"
-                                                        accept="image/*"
-                                                        className="hidden"
-                                                        onChange={(e) => handleFileUpload(e.target.files[0], (url) => setFormData(prev => ({ ...prev, gallery: [...prev.gallery, url] })))}
-                                                    />
-                                                </label>
                                             </div>
-                                            {(formData.gallery.length > 0) && (
-                                                <p className="text-xs text-gray-500 mt-2 text-right">{formData.gallery.length} images uploaded</p>
-                                            )}
-                                        </div>
+                                        ) : (
+                                            <div className="border-2 border-dashed border-gray-200 rounded-xl p-8 text-center text-gray-400">
+                                                <PhotoIcon className="w-8 h-8 mx-auto mb-2 opacity-30" />
+                                                <p className="text-sm">No extra photos yet. Click "Add Photo" to upload.</p>
+                                            </div>
+                                        )}
+                                        {extraGallery.length > 0 && (
+                                            <p className="text-xs text-gray-400 mt-2 text-right">{extraGallery.length} extra photo{extraGallery.length !== 1 ? 's' : ''} added</p>
+                                        )}
                                     </div>
                                 </motion.div>
                             )}
@@ -568,88 +895,107 @@ export default function ClientOnboarding() {
 
                                             {formData.services.map((service, index) => (
                                                 <div key={index} className="bg-gray-50 rounded-2xl border border-gray-100 overflow-hidden transition-all hover:shadow-md">
-                                                    <div className="p-4 md:p-6 grid md:grid-cols-12 gap-6">
+                                                    <div className="p-4 md:p-5 space-y-4">
 
-                                                        {/* Service Image (AI / Upload) */}
-                                                        <div className="md:col-span-4 space-y-3">
-                                                            <div className="relative aspect-video bg-gray-200 rounded-xl overflow-hidden group border border-gray-200">
-                                                                {service.image ? (
-                                                                    <img
-                                                                        key={service.image} // Force re-render on URL change
-                                                                        src={service.image}
-                                                                        alt={service.name}
-                                                                        className="w-full h-full object-cover"
-                                                                        onError={(e) => {
-                                                                            e.target.onerror = null;
-                                                                            // Fallback to a static placeholder if AI fails
-                                                                            e.target.src = 'https://placehold.co/800x600/f3f4f6/9ca3af?text=AI+Generation+Failed';
-                                                                        }}
-                                                                    />
+                                                        {/* Row 1: Service Name + Delete */}
+                                                        <div className="flex items-center gap-3">
+                                                            <div className="flex-1 space-y-1">
+                                                                <label className="text-xs font-bold text-gray-500 uppercase tracking-wider">Service Name</label>
+                                                                <input
+                                                                    type="text"
+                                                                    placeholder="e.g. Haircut, Pizza, Consultation"
+                                                                    value={service.name}
+                                                                    onChange={(e) => updateItem('services', index, 'name', e.target.value)}
+                                                                    className="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:border-blue-500 focus:outline-none font-medium"
+                                                                />
+                                                            </div>
+                                                            <button onClick={() => removeItem('services', index)} className="text-gray-400 hover:text-red-500 p-2 hover:bg-red-50 rounded-lg transition-colors flex-shrink-0 mt-5">
+                                                                <TrashIcon className="w-5 h-5" />
+                                                            </button>
+                                                        </div>
+
+                                                        {/* Row 2: Photo Box */}
+                                                        <div className="space-y-2">
+                                                            <label className="text-xs font-bold text-gray-500 uppercase tracking-wider">Service Photo</label>
+                                                            <div className="relative h-44 bg-gray-200 rounded-xl overflow-hidden group border border-gray-200">
+                                                                {generatingStates[`services-${index}`] ? (
+                                                                    <div className="w-full h-full flex flex-col items-center justify-center gap-2 bg-gray-100">
+                                                                        <div className="w-8 h-8 border-4 border-purple-500 border-t-transparent rounded-full animate-spin"></div>
+                                                                        <p className="text-purple-600 text-xs font-semibold">Generating AI photo...</p>
+                                                                    </div>
+                                                                ) : service.image ? (
+                                                                    <>
+                                                                        <img
+                                                                            key={service.image}
+                                                                            src={service.image}
+                                                                            alt={service.name}
+                                                                            className="w-full h-full object-cover"
+                                                                            onError={(e) => { e.target.onerror = null; e.target.src = 'https://placehold.co/800x600/f3f4f6/9ca3af?text=Image+Failed'; }}
+                                                                        />
+                                                                        <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-3">
+                                                                            <label className="cursor-pointer bg-white text-gray-900 px-3 py-2 rounded-lg text-xs font-bold hover:bg-gray-100 flex items-center gap-2 shadow">
+                                                                                <ArrowUpTrayIcon className="w-4 h-4" /> Upload New
+                                                                                <input type="file" accept="image/*" className="hidden" onChange={(e) => handleFileUpload(e.target.files[0], (url) => updateItem('services', index, 'image', url))} />
+                                                                            </label>
+                                                                            <button
+                                                                                onClick={(e) => { e.preventDefault(); handleAIGeneration('services', index); }}
+                                                                                disabled={generatingStates[`services-${index}`]}
+                                                                                className="bg-gradient-to-r from-purple-500 to-indigo-600 text-white px-3 py-2 rounded-lg text-xs font-bold flex items-center gap-1 disabled:opacity-50 shadow"
+                                                                            >
+                                                                                <SparklesIcon className="w-3.5 h-3.5" /> Regenerate AI
+                                                                            </button>
+                                                                            <button onClick={() => updateItem('services', index, 'image', '')} className="bg-red-500 text-white p-2 rounded-full hover:bg-red-600 shadow">
+                                                                                <TrashIcon className="w-4 h-4" />
+                                                                            </button>
+                                                                        </div>
+                                                                    </>
                                                                 ) : (
-                                                                    <div className="flex flex-col items-center justify-center h-full text-gray-400 p-4 text-center cursor-pointer hover:bg-gray-100 transition-colors">
-                                                                        <ArrowUpTrayIcon className="w-8 h-8 mb-2 opacity-50" />
-                                                                        <span className="text-xs">Click "Upload" to add a photo</span>
+                                                                    <div className="w-full h-full flex flex-col items-center justify-center gap-3 text-gray-400 p-4">
+                                                                        <PhotoIcon className="w-10 h-10 opacity-30" />
+                                                                        <div className="flex gap-3">
+                                                                            <label className="cursor-pointer bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-xs font-bold flex items-center gap-1.5 transition-colors">
+                                                                                <ArrowUpTrayIcon className="w-3.5 h-3.5" /> Upload Photo
+                                                                                <input type="file" accept="image/*" className="hidden" onChange={(e) => handleFileUpload(e.target.files[0], (url) => updateItem('services', index, 'image', url))} />
+                                                                            </label>
+                                                                            <button
+                                                                                onClick={(e) => { e.preventDefault(); handleAIGeneration('services', index); }}
+                                                                                disabled={generatingStates[`services-${index}`] || !service.name.trim()}
+                                                                                title={!service.name.trim() ? 'Enter a service name first' : 'Generate with AI'}
+                                                                                className="bg-gradient-to-r from-purple-500 to-indigo-600 hover:from-purple-600 hover:to-indigo-700 text-white px-4 py-2 rounded-lg text-xs font-bold flex items-center gap-1.5 disabled:opacity-40 transition-all"
+                                                                            >
+                                                                                <SparklesIcon className="w-3.5 h-3.5" /> Generate AI
+                                                                            </button>
+                                                                        </div>
+                                                                        {!service.name.trim() && <p className="text-xs text-amber-500">Enter service name above to enable AI generation</p>}
                                                                     </div>
                                                                 )}
-
-                                                                {/* Overlay Actions */}
-                                                                <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center gap-2">
-                                                                    <label className="cursor-pointer bg-white text-gray-900 px-4 py-2 rounded-lg text-sm font-bold hover:bg-gray-100 transition-colors shadow-lg flex items-center gap-2">
-                                                                        <ArrowUpTrayIcon className="w-4 h-4" /> Upload Photo
-                                                                        <input
-                                                                            type="file"
-                                                                            accept="image/*"
-                                                                            className="hidden"
-                                                                            onChange={(e) => handleFileUpload(e.target.files[0], (url) => updateItem('services', index, 'image', url))}
-                                                                        />
-                                                                    </label>
-                                                                </div>
                                                             </div>
                                                         </div>
 
-                                                        {/* Service Details */}
-                                                        <div className="md:col-span-8 space-y-4">
-                                                            <div className="flex justify-between items-start">
-                                                                <div className="space-y-1 flex-1 mr-4">
-                                                                    <label className="text-xs font-bold text-gray-500 uppercase tracking-wider">Service Name</label>
-                                                                    <div className="flex gap-2">
-                                                                        <input
-                                                                            type="text"
-                                                                            placeholder="e.g. Haircut, Pizza, Consultation"
-                                                                            value={service.name}
-                                                                            onChange={(e) => updateItem('services', index, 'name', e.target.value)}
-                                                                            className="w-full px-4 py-2 rounded-xl border border-gray-200 focus:border-blue-500 focus:outline-none"
-                                                                        />
-                                                                    </div>
-                                                                </div>
-                                                                <button onClick={() => removeItem('services', index)} className="text-gray-400 hover:text-red-500 p-2 hover:bg-red-50 rounded-lg transition-colors">
-                                                                    <TrashIcon className="w-5 h-5" />
-                                                                </button>
+                                                        {/* Row 3: Price + Description */}
+                                                        <div className="grid grid-cols-2 gap-4">
+                                                            <div className="space-y-1">
+                                                                <label className="text-xs font-bold text-gray-500 uppercase tracking-wider">Price</label>
+                                                                <input
+                                                                    type="text"
+                                                                    placeholder="e.g. ₹500"
+                                                                    value={service.price}
+                                                                    onChange={(e) => updateItem('services', index, 'price', e.target.value)}
+                                                                    className="w-full px-4 py-2 rounded-xl border border-gray-200 focus:border-blue-500 focus:outline-none"
+                                                                />
                                                             </div>
-
-                                                            <div className="grid grid-cols-2 gap-4">
-                                                                <div className="space-y-1">
-                                                                    <label className="text-xs font-bold text-gray-500 uppercase tracking-wider">Price</label>
-                                                                    <input
-                                                                        type="text"
-                                                                        placeholder="e.g. ₹500"
-                                                                        value={service.price}
-                                                                        onChange={(e) => updateItem('services', index, 'price', e.target.value)}
-                                                                        className="w-full px-4 py-2 rounded-xl border border-gray-200 focus:border-blue-500 focus:outline-none"
-                                                                    />
-                                                                </div>
-                                                                <div className="space-y-1">
-                                                                    <label className="text-xs font-bold text-gray-500 uppercase tracking-wider">Description</label>
-                                                                    <input
-                                                                        type="text"
-                                                                        placeholder="Short description"
-                                                                        value={service.description}
-                                                                        onChange={(e) => updateItem('services', index, 'description', e.target.value)}
-                                                                        className="w-full px-4 py-2 rounded-xl border border-gray-200 focus:border-blue-500 focus:outline-none"
-                                                                    />
-                                                                </div>
+                                                            <div className="space-y-1">
+                                                                <label className="text-xs font-bold text-gray-500 uppercase tracking-wider">Description</label>
+                                                                <input
+                                                                    type="text"
+                                                                    placeholder="Short description"
+                                                                    value={service.description}
+                                                                    onChange={(e) => updateItem('services', index, 'description', e.target.value)}
+                                                                    className="w-full px-4 py-2 rounded-xl border border-gray-200 focus:border-blue-500 focus:outline-none"
+                                                                />
                                                             </div>
                                                         </div>
+
                                                     </div>
                                                 </div>
                                             ))}
@@ -673,7 +1019,7 @@ export default function ClientOnboarding() {
                                                 {formData.teamMembers.map((member, index) => (
                                                     <div key={index} className="bg-gray-50 rounded-2xl border border-gray-100 p-4 flex items-center gap-4 group hover:shadow-md transition-all">
 
-                                                        {/* Team Photo */}
+                                                        {/* Team Photo - Upload Only */}
                                                         <div className="relative w-16 h-16 flex-shrink-0">
                                                             <div className="w-full h-full rounded-full overflow-hidden bg-gray-200 border border-gray-200">
                                                                 {member.image ? (
@@ -684,8 +1030,8 @@ export default function ClientOnboarding() {
                                                                     </div>
                                                                 )}
                                                             </div>
-                                                            {/* Upload Trigger */}
-                                                            <label className="absolute -bottom-1 -right-1 bg-white border border-gray-200 p-1.5 rounded-full shadow-sm cursor-pointer hover:bg-blue-50 transition-colors text-blue-600">
+                                                            {/* Upload trigger only */}
+                                                            <label className="absolute -bottom-1 -right-1 bg-blue-600 hover:bg-blue-700 text-white p-1.5 rounded-full cursor-pointer shadow-md transition-colors" title="Upload photo">
                                                                 <ArrowUpTrayIcon className="w-3 h-3" />
                                                                 <input
                                                                     type="file"
@@ -766,6 +1112,21 @@ export default function ClientOnboarding() {
                                                     +
                                                 </button>
                                             </div>
+                                        </div>
+
+                                        {/* Google Review Link */}
+                                        <div>
+                                            <div className="mb-4">
+                                                <label className="text-lg font-bold text-gray-900">Google Review Link</label>
+                                                <p className="text-gray-500 text-sm mt-1">This link opens the "Write a Review" dialog directly on Google. It powers the "Post on Google" button.</p>
+                                            </div>
+                                            <input
+                                                type="text"
+                                                value={formData.googleReviewUrl}
+                                                onChange={(e) => setFormData({ ...formData, googleReviewUrl: e.target.value })}
+                                                className="w-full px-5 py-4 rounded-xl border-2 border-gray-100 bg-gray-50 focus:border-blue-500 focus:bg-white focus:outline-none transition-all"
+                                                placeholder="https://g.page/r/.../review"
+                                            />
                                         </div>
 
                                         {/* Social Media */}
@@ -901,84 +1262,54 @@ export default function ClientOnboarding() {
 
                                     {/* Scan to Pay Section */}
                                     <div>
-                                        <label className="block text-sm font-bold text-gray-700 mb-4">Payment Method</label>
+                                        <label className="block text-sm font-bold text-gray-700 mb-4">Complete Payment</label>
 
                                         <div className="bg-white rounded-2xl border-2 border-blue-100 p-8 flex flex-col items-center text-center shadow-lg relative overflow-hidden">
                                             <div className="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-blue-400 via-purple-400 to-pink-400"></div>
 
                                             <div className="mb-6">
-                                                <h3 className="text-2xl font-bold text-gray-900 mb-1">Scan & Pay ₹1</h3>
-                                                <p className="text-gray-500 text-sm">Use any UPI app to complete the testing transaction</p>
+                                                <h3 className="text-2xl font-bold text-gray-900 mb-1">Scan & Pay ₹999</h3>
+                                                <p className="text-gray-500 text-sm">Use any UPI app to complete the transaction</p>
                                             </div>
 
-                                            {/* QR Code Placeholder - User to Replace */}
                                             <div className="p-4 bg-white rounded-xl border-2 border-gray-100 shadow-inner mb-6 relative group">
-                                                {/* Placeholder Image - Instruct user to replace this source */}
-                                                {/* Use a placeholder service or asset path */}
                                                 <img
-                                                    src={`https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${encodeURIComponent("upi://pay?pa=7878002359@ptsbi&pn=Amaan Tanveer&am=1.00&cu=INR")}`}
+                                                    src={`https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${encodeURIComponent("upi://pay?pa=7878002359@ptsbi&pn=Amaan Tanveer&am=999.00&cu=INR")}`}
                                                     alt="Payment QR Code"
                                                     className="w-48 h-48 md:w-56 md:h-56 object-contain mix-blend-multiply"
                                                 />
                                                 <p className="mt-2 text-xs text-gray-400 font-mono">7878002359@ptsbi</p>
                                             </div>
 
-                                            <div className="flex gap-4 opacity-50 grayscale hover:grayscale-0 transition-all duration-300">
+                                            <div className="flex gap-4 opacity-50 grayscale hover:grayscale-0 transition-all duration-300 mb-8">
                                                 <span className="font-bold text-blue-800 italic">Paytm</span>
                                                 <span className="font-bold text-green-600 italic">PhonePe</span>
                                                 <span className="font-bold text-orange-500 italic">GPay</span>
                                                 <span className="font-bold text-gray-800 italic">BHIM</span>
                                             </div>
+
+                                            {/* UTR Number Input */}
+                                            <div className="w-full max-w-md text-left">
+                                                <label className="block text-sm font-bold text-gray-700 mb-2">UPI Transaction / UTR Number <span className="text-red-500">*</span></label>
+                                                <input
+                                                    type="text"
+                                                    value={formData.utrNumber}
+                                                    onChange={(e) => setFormData({ ...formData, utrNumber: e.target.value })}
+                                                    className="w-full px-5 py-4 rounded-xl border-2 border-gray-200 bg-gray-50 focus:border-blue-500 focus:bg-white focus:outline-none transition-all font-mono text-lg tracking-wider"
+                                                    placeholder="e.g. 421234567890"
+                                                />
+                                                <p className="text-xs text-gray-400 mt-2">Enter the reference number shown in your UPI app after payment</p>
+                                            </div>
                                         </div>
                                     </div>
                                 </motion.div>
                             )}
 
-                            {/* --- STEP 7: SUCCESS --- */}
-                            {currentStep === 7 && (
-                                <motion.div key="step7" initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className="text-center py-10">
-                                    <div className="w-24 h-24 bg-green-100 text-green-600 rounded-full flex items-center justify-center mx-auto mb-6">
-                                        <CheckCircleIcon className="w-16 h-16" />
-                                    </div>
-                                    <h2 className="text-4xl font-bold text-gray-900 mb-4">You're All Set!</h2>
-                                    <p className="text-gray-600 text-lg mb-8 max-w-lg mx-auto">
-                                        Your business profile has been created and your dashboard is ready.
-                                    </p>
-
-                                    <div className="bg-gray-900 text-white rounded-2xl p-8 max-w-md mx-auto mb-10 shadow-2xl relative overflow-hidden">
-                                        <div className="relative z-10">
-                                            <h3 className="text-sm uppercase tracking-widest text-gray-400 mb-6 font-bold">Your Credentials</h3>
-
-                                            <div className="mb-6 text-left border-b border-gray-700 pb-6">
-                                                <label className="text-xs text-gray-500 mb-1 block">Username</label>
-                                                <div className="text-2xl font-mono text-green-400 font-bold tracking-wide">
-                                                    {formData.generatedUsername}
-                                                </div>
-                                            </div>
-
-                                            <div className="text-left">
-                                                <label className="text-xs text-gray-500 mb-1 block">Password</label>
-                                                <div className="text-2xl font-mono text-blue-400 font-bold tracking-wide">
-                                                    {formData.generatedPassword}
-                                                </div>
-                                            </div>
-                                        </div>
-                                        <div className="absolute top-0 right-0 w-32 h-32 bg-blue-600 rounded-full blur-3xl opacity-20"></div>
-                                        <div className="absolute bottom-0 left-0 w-32 h-32 bg-purple-600 rounded-full blur-3xl opacity-20"></div>
-                                    </div>
-
-                                    <button
-                                        onClick={() => navigate('/login', { state: { defaultMode: 'client' } })}
-                                        className="btn btn-primary text-xl px-12 py-4 shadow-xl hover:shadow-2xl transform hover:-translate-y-1 transition-all"
-                                    >
-                                        Login to Dashboard
-                                    </button>
-                                </motion.div>
-                            )}
+                            {/* Step 7 is removed - success is shown via popup */}
                         </AnimatePresence>
 
                         {/* Navigation Footer */}
-                        {currentStep < 7 && (
+                        {currentStep <= 6 && (
                             <div className="flex justify-between items-center mt-12 pt-8 border-t border-gray-100">
                                 <button
                                     onClick={handleBack}
@@ -999,10 +1330,10 @@ export default function ClientOnboarding() {
                                 ) : (
                                     <button
                                         onClick={handleSubmit}
-                                        disabled={isProcessing}
+                                        disabled={isProcessing || !formData.utrNumber}
                                         className="bg-gradient-to-r from-green-600 to-emerald-600 text-white px-8 py-4 rounded-xl font-bold hover:from-green-700 hover:to-emerald-700 transition-all flex items-center gap-2 shadow-xl hover:shadow-2xl transform hover:-translate-y-0.5 disabled:opacity-70 disabled:cursor-wait"
                                     >
-                                        {isProcessing ? 'Creating Account...' : 'Complete & Pay'}
+                                        {isProcessing ? 'Submitting...' : "I've Paid — Submit Application"}
                                         {!isProcessing && <CheckCircleIcon className="w-6 h-6" />}
                                     </button>
                                 )}
@@ -1011,17 +1342,19 @@ export default function ClientOnboarding() {
                     </div>
                 </motion.div>
 
-                {currentStep < 7 && (
-                    <div className="text-center mt-8">
-                        <button onClick={() => navigate('/')} className="text-gray-400 hover:text-gray-600 font-medium transition-colors">
-                            Cancel Setup
-                        </button>
-                    </div>
-                )}
-            </div>
+                {
+                    currentStep <= 6 && (
+                        <div className="text-center mt-8">
+                            <button onClick={() => navigate('/')} className="text-gray-400 hover:text-gray-600 font-medium transition-colors">
+                                Cancel Setup
+                            </button>
+                        </div>
+                    )
+                }
+            </div >
 
             {/* Payment Processing Overlay (Buffering) */}
-            <AnimatePresence>
+            < AnimatePresence >
                 {isPaymentOverlayOpen && (
                     <motion.div
                         initial={{ opacity: 0 }}
@@ -1067,8 +1400,67 @@ export default function ClientOnboarding() {
                             </button>
                         </motion.div>
                     </motion.div>
+                )
+                }
+            </AnimatePresence >
+
+            {/* Account In Process Success Popup */}
+            < AnimatePresence >
+                {showSuccessPopup && (
+                    <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-4"
+                    >
+                        <motion.div
+                            initial={{ scale: 0.8, opacity: 0 }}
+                            animate={{ scale: 1, opacity: 1 }}
+                            exit={{ scale: 0.8, opacity: 0 }}
+                            className="bg-white rounded-3xl p-10 max-w-md w-full text-center relative overflow-hidden shadow-2xl"
+                        >
+                            {/* Celebratory top bar */}
+                            <div className="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-green-400 via-emerald-500 to-teal-500"></div>
+
+                            <div className="w-24 h-24 bg-amber-50 border-4 border-amber-200 rounded-full flex items-center justify-center mx-auto mb-6">
+                                <SparklesIcon className="w-12 h-12 text-amber-500" />
+                            </div>
+
+                            <h2 className="text-2xl font-extrabold text-gray-900 mb-3">Application Received!</h2>
+                            <p className="text-gray-600 leading-relaxed mb-6">
+                                Your payment is being verified. Once confirmed, your <strong>Login ID & Password</strong> will be sent to:
+                            </p>
+
+                            <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 mb-8">
+                                <p className="text-blue-800 font-bold text-lg">{formData.email}</p>
+                                <p className="text-blue-600 text-sm mt-1">Please check your inbox (and spam) within 24 hours.</p>
+                            </div>
+
+                            <div className="bg-gray-50 rounded-xl p-4 mb-8 text-left space-y-2">
+                                <div className="flex items-center gap-3">
+                                    <div className="w-8 h-8 rounded-full bg-green-100 flex items-center justify-center flex-shrink-0"><CheckCircleIcon className="w-5 h-5 text-green-600" /></div>
+                                    <span className="text-gray-700 text-sm">Business details submitted</span>
+                                </div>
+                                <div className="flex items-center gap-3">
+                                    <div className="w-8 h-8 rounded-full bg-green-100 flex items-center justify-center flex-shrink-0"><CheckCircleIcon className="w-5 h-5 text-green-600" /></div>
+                                    <span className="text-gray-700 text-sm">Payment reference received</span>
+                                </div>
+                                <div className="flex items-center gap-3">
+                                    <div className="w-8 h-8 rounded-full bg-amber-100 flex items-center justify-center flex-shrink-0"><SparklesIcon className="w-5 h-5 text-amber-500 animate-pulse" /></div>
+                                    <span className="text-gray-700 text-sm font-semibold">Verification in progress...</span>
+                                </div>
+                            </div>
+
+                            <button
+                                onClick={() => navigate('/')}
+                                className="w-full py-4 bg-gray-900 text-white rounded-xl font-bold text-lg hover:bg-black transition-colors shadow-lg"
+                            >
+                                Back to Home
+                            </button>
+                        </motion.div>
+                    </motion.div>
                 )}
-            </AnimatePresence>
-        </div>
+            </AnimatePresence >
+        </div >
     );
 }

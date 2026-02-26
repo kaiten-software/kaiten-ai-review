@@ -1,4 +1,4 @@
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Navbar from '../components/common/Navbar';
@@ -21,8 +21,45 @@ export default function Home() {
     const navigate = useNavigate();
     const [businesses, setBusinesses] = useState([]); // All businesses
     const [visibleBusinesses, setVisibleBusinesses] = useState([]); // Displayed businesses
-    const [searchTerm, setSearchTerm] = useState('');
-    const [selectedCategory, setSelectedCategory] = useState('All');
+    const [showJoinPayment, setShowJoinPayment] = useState(false);
+    const [joinUtr, setJoinUtr] = useState('');
+    const [joinSubmitting, setJoinSubmitting] = useState(false);
+
+    // Custom Smooth Typewriter State
+    const [typeText, setTypeText] = useState('');
+    const [wordIndex, setWordIndex] = useState(0);
+    const [isDeleting, setIsDeleting] = useState(false);
+
+    const typewriterWords = [
+        { text: 'Authentic AI Reviews', color: 'from-[#0B2046] via-[#24889F] to-[#0B2046]' },
+        { text: '5-Star Ratings', color: 'from-[#24889F] via-teal-500 to-[#0B2046]' },
+        { text: 'Happy Customers', color: 'from-[#0B2046] via-indigo-600 to-[#24889F]' },
+        { text: 'Real Feedback', color: 'from-[#24889F] via-blue-600 to-[#0B2046]' }
+    ];
+
+    useEffect(() => {
+        let timer;
+        const currentWord = typewriterWords[wordIndex].text;
+
+        if (isDeleting) {
+            timer = setTimeout(() => {
+                setTypeText(currentWord.substring(0, typeText.length - 1));
+                if (typeText.length <= 1) {
+                    setIsDeleting(false);
+                    setWordIndex((prev) => (prev + 1) % typewriterWords.length);
+                }
+            }, 30);
+        } else {
+            timer = setTimeout(() => {
+                setTypeText(currentWord.substring(0, typeText.length + 1));
+                if (typeText.length === currentWord.length) {
+                    timer = setTimeout(() => setIsDeleting(true), 2500);
+                }
+            }, 70);
+        }
+
+        return () => clearTimeout(timer);
+    }, [typeText, isDeleting, wordIndex]);
 
     // Helper to guess category if not present
     const getCategory = (b) => {
@@ -34,16 +71,6 @@ export default function Home() {
         if (text.includes('tech') || text.includes('software') || text.includes('app')) return 'Tech';
         if (text.includes('coffee') || text.includes('cafe')) return 'Cafe';
         return 'Other';
-    };
-
-    // Fisher-Yates shuffle
-    const shuffleArray = (array) => {
-        const arr = [...array];
-        for (let i = arr.length - 1; i > 0; i--) {
-            const j = Math.floor(Math.random() * (i + 1));
-            [arr[i], arr[j]] = [arr[j], arr[i]];
-        }
-        return arr;
     };
 
     useEffect(() => {
@@ -114,37 +141,12 @@ export default function Home() {
             all = all.map(b => ({ ...b, category: getCategory(b) }));
             setBusinesses(all);
 
-            // Initially shuffle and show 6
-            setVisibleBusinesses(shuffleArray(all).slice(0, 6));
+            // Show only top 6 businesses on homepage (sorted by rating)
+            const sortedByRating = [...all].sort((a, b) => b.rating - a.rating);
+            setVisibleBusinesses(sortedByRating.slice(0, 6));
         };
         loadBusinesses();
     }, []);
-
-    // Filter effect
-    useEffect(() => {
-        if (businesses.length === 0) return;
-
-        let filtered = [...businesses];
-
-        // If user is searching or filtering, show relevant results from WHOLE list
-        if (searchTerm || selectedCategory !== 'All') {
-            if (searchTerm) {
-                const lower = searchTerm.toLowerCase();
-                filtered = filtered.filter(b =>
-                    b.name.toLowerCase().includes(lower) ||
-                    b.description.toLowerCase().includes(lower) ||
-                    b.tagline.toLowerCase().includes(lower)
-                );
-            }
-            if (selectedCategory !== 'All') {
-                filtered = filtered.filter(b => b.category === selectedCategory);
-            }
-            // Show up to 6 matches
-            setVisibleBusinesses(filtered.slice(0, 6));
-        } else {
-            setVisibleBusinesses(shuffleArray(businesses).slice(0, 6));
-        }
-    }, [searchTerm, selectedCategory, businesses]);
 
     const features = [
         {
@@ -178,7 +180,7 @@ export default function Home() {
             <Navbar />
 
             {/* Hero Section - Redesigned with better spacing */}
-            <section className="relative min-h-screen flex items-center justify-center overflow-hidden pt-20 pb-32">
+            <section className="relative min-h-screen flex items-center justify-center overflow-hidden pt-10 pb-32">
                 {/* Animated Background */}
                 <div className="absolute inset-0">
                     <div className="absolute inset-0 bg-gradient-to-br from-blue-100/50 via-purple-100/50 to-pink-100/50"></div>
@@ -192,14 +194,14 @@ export default function Home() {
                         initial={{ opacity: 0, y: 30 }}
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ duration: 0.8 }}
-                        className="text-center max-w-5xl mx-auto"
+                        className="text-center max-w-5xl mx-auto mt-16 md:mt-24"
                     >
                         {/* Logo */}
                         <motion.div
                             initial={{ scale: 0, rotate: -180 }}
                             animate={{ scale: 1, rotate: 0 }}
                             transition={{ delay: 0.2, type: 'spring', stiffness: 200 }}
-                            className="flex justify-center mb-10"
+                            className="flex justify-center mb-16"
                         >
                             <Logo size="large" variant="full" />
                         </motion.div>
@@ -208,30 +210,39 @@ export default function Home() {
                             initial={{ scale: 0 }}
                             animate={{ scale: 1 }}
                             transition={{ delay: 0.4, type: 'spring' }}
-                            className="inline-block mb-8"
+                            className="inline-block mb-10"
                         >
-                            <span className="px-8 py-4 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-full text-base font-bold shadow-2xl animate-pulse">
+                            <span className="px-8 py-4 bg-gradient-to-r from-[#0B2046] to-[#24889F] text-white rounded-full text-base md:text-lg font-bold shadow-2xl animate-[pulse_2s_ease-in-out_infinite] hover:scale-105 transition-transform">
                                 🚀 Authentic Growth Engine
                             </span>
                         </motion.div>
 
-                        <h1 className="text-5xl md:text-6xl lg:text-7xl font-bold mb-8 leading-tight">
-                            <span className="text-gray-900">Boost Your Business with</span>
+                        <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-bold mb-6 sm:mb-8 leading-tight px-2">
+                            <span className="text-[#0B2046]">Boost Your Business with</span>
                             <br />
-                            <span className="bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 bg-clip-text text-transparent">
-                                Authentic AI Reviews
-                            </span>
+                            <div className="inline-block mt-2 min-h-[1.5em] lg:min-h-[1.2em] whitespace-nowrap overflow-visible">
+                                <span
+                                    className={`bg-gradient-to-r ${typewriterWords[wordIndex].color} bg-clip-text text-transparent font-black pr-1 transition-all duration-300`}
+                                    style={{
+                                        backgroundSize: '200% 200%',
+                                        animation: 'gradient-shift 4s ease infinite',
+                                    }}
+                                >
+                                    {typeText}
+                                </span>
+                                <span className="inline-block w-[3px] h-[0.9em] bg-slate-800 dark:bg-slate-200 animate-[pulse_1s_infinite] align-middle -mt-2 opacity-80" />
+                            </div>
                         </h1>
 
-                        <p className="text-xl md:text-2xl text-gray-700 mb-12 max-w-4xl mx-auto leading-relaxed">
+                        <p className="text-lg sm:text-xl md:text-2xl text-gray-700 mb-8 sm:mb-12 max-w-4xl mx-auto leading-relaxed px-4">
                             <span className="font-bold text-red-500 block mb-2">⚠ Stop Buying Fake Reviews. It's Risky.</span>
                             Earn genuine 5-star ratings with AI. Your competitors are already using it to dominate the market—<span className="font-bold text-blue-600">don't get left behind.</span>
                         </p>
 
-                        <div className="flex flex-col sm:flex-row gap-6 justify-center mb-16">
+                        <div className="flex flex-col sm:flex-row gap-4 sm:gap-6 justify-center mb-12 sm:mb-16 px-4">
                             <button
                                 onClick={() => document.getElementById('businesses').scrollIntoView({ behavior: 'smooth' })}
-                                className="group relative px-10 py-5 bg-gradient-to-r from-blue-600 to-purple-600 text-white font-bold text-lg rounded-2xl shadow-2xl hover:shadow-3xl transition-all duration-300 overflow-hidden"
+                                className="group relative px-6 sm:px-10 py-4 sm:py-5 bg-gradient-to-r from-blue-600 to-purple-600 text-white font-bold text-lg rounded-xl sm:rounded-2xl shadow-xl sm:shadow-2xl hover:shadow-3xl transition-all duration-300 overflow-hidden w-full sm:w-auto"
                             >
                                 <span className="relative z-10 flex items-center justify-center gap-3">
                                     <SparklesIcon className="w-6 h-6" />
@@ -241,7 +252,7 @@ export default function Home() {
                             </button>
                             <button
                                 onClick={() => navigate('/onboarding')}
-                                className="group relative px-10 py-5 bg-gradient-to-r from-green-600 to-emerald-600 text-white font-bold text-lg rounded-2xl shadow-2xl hover:shadow-3xl transition-all duration-300 overflow-hidden"
+                                className="group relative px-6 sm:px-10 py-4 sm:py-5 bg-gradient-to-r from-green-600 to-emerald-600 text-white font-bold text-lg rounded-xl sm:rounded-2xl shadow-xl sm:shadow-2xl hover:shadow-3xl transition-all duration-300 overflow-hidden w-full sm:w-auto"
                             >
                                 <span className="relative z-10 flex items-center justify-center gap-3">
                                     🚀 Join Now
@@ -267,15 +278,15 @@ export default function Home() {
                                     initial={{ opacity: 0, y: 20, scale: 0.95 }}
                                     animate={{ opacity: 1, y: 0, scale: 1 }}
                                     transition={{ delay: 0.3 + (index * 0.1), duration: 0.5, ease: "easeOut" }}
-                                    className="bg-white/80 backdrop-blur-lg p-8 rounded-3xl shadow-xl hover:shadow-2xl transition-all duration-300 hover:-translate-y-2 border border-white"
+                                    className="bg-white/80 backdrop-blur-lg p-6 sm:p-8 rounded-2xl sm:rounded-3xl shadow-xl hover:shadow-2xl transition-all duration-300 hover:-translate-y-2 border border-white"
                                 >
-                                    <div className={`w-16 h-16 bg-gradient-to-br ${stat.color} rounded-2xl flex items-center justify-center text-white mb-4 mx-auto shadow-lg`}>
+                                    <div className={`w-12 h-12 sm:w-16 sm:h-16 bg-gradient-to-br ${stat.color} rounded-xl sm:rounded-2xl flex items-center justify-center text-white mb-3 sm:mb-4 mx-auto shadow-lg`}>
                                         {stat.icon}
                                     </div>
-                                    <div className={`text-4xl md:text-5xl font-bold bg-gradient-to-r ${stat.color} bg-clip-text text-transparent mb-2`}>
+                                    <div className={`text-3xl sm:text-4xl md:text-5xl font-bold bg-gradient-to-r ${stat.color} bg-clip-text text-transparent mb-1 sm:mb-2`}>
                                         {stat.number}
                                     </div>
-                                    <div className="text-gray-600 font-semibold">{stat.label}</div>
+                                    <div className="text-gray-600 font-semibold text-sm sm:text-base">{stat.label}</div>
                                 </motion.div>
                             ))}
                         </motion.div>
@@ -296,7 +307,7 @@ export default function Home() {
                         className="text-center mb-20"
                     >
                         <h2 className="text-5xl md:text-6xl font-bold mb-6">
-                            Why Choose <span className="bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">Kaiten AI Review</span>
+                            Why Choose <span className="bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">RankBag</span>
                         </h2>
                         <p className="text-xl text-gray-600 max-w-3xl mx-auto leading-relaxed">
                             Everything you need to manage and grow your online reputation with cutting-edge technology
@@ -334,37 +345,13 @@ export default function Home() {
                         className="text-center mb-16"
                     >
                         <h2 className="text-5xl md:text-6xl font-bold mb-6">
-                            Select a <span className="bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">Business</span>
+                            Featured <span className="bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">Businesses</span>
                         </h2>
                         <p className="text-xl text-gray-600 max-w-3xl mx-auto leading-relaxed mb-10">
-                            Choose a business to share your experience and help others make informed decisions.
+                            Discover our top-rated businesses and share your experience.
                         </p>
 
-                        {/* Search and Filters for Home Page */}
-                        <div className="max-w-3xl mx-auto bg-white p-2 rounded-2xl shadow-xl border border-gray-100 flex flex-col sm:flex-row gap-2">
-                            <div className="relative flex-grow">
-                                <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400">🔍</span>
-                                <input
-                                    type="text"
-                                    placeholder="Search businesses..."
-                                    className="w-full pl-10 pr-4 py-3 bg-gray-50 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                    value={searchTerm}
-                                    onChange={(e) => setSearchTerm(e.target.value)}
-                                />
-                            </div>
-                            <select
-                                className="px-4 py-3 bg-gray-50 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 text-gray-600 font-medium cursor-pointer"
-                                value={selectedCategory}
-                                onChange={(e) => setSelectedCategory(e.target.value)}
-                            >
-                                <option value="All">All Categories</option>
-                                <option value="Salon">Salon</option>
-                                <option value="Restaurant">Restaurant</option>
-                                <option value="Gym">Gym/Fitness</option>
-                                <option value="Spa">Spa</option>
-                                <option value="Other">Other</option>
-                            </select>
-                        </div>
+
                     </motion.div>
 
                     <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8 mb-12">
@@ -416,15 +403,7 @@ export default function Home() {
                         ))}
                     </div>
 
-                    <div className="flex justify-center">
-                        <button
-                            onClick={() => navigate('/businesses')}
-                            className="group relative px-8 py-4 bg-white text-gray-900 border-2 border-gray-200 rounded-full font-bold text-lg hover:border-purple-500 hover:text-purple-600 transition-all duration-300 shadow-lg flex items-center gap-3"
-                        >
-                            <span className="relative z-10">Explore All Businesses</span>
-                            <span className="group-hover:translate-x-1 transition-transform">→</span>
-                        </button>
-                    </div>
+                    {/* Removed 'Explore All Businesses' button - only top 6 shown on homepage */}
                 </div>
             </section>
 
@@ -462,10 +441,10 @@ export default function Home() {
                             {/* Glowing border effect */}
                             <div className="absolute -inset-1 bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 rounded-[2.5rem] blur opacity-25 group-hover:opacity-100 transition duration-1000 group-hover:duration-200"></div>
 
-                            <div className="relative bg-white rounded-[2.5rem] p-8 md:p-12 shadow-2xl border border-gray-100">
-                                <div className="absolute -top-6 left-1/2 -translate-x-1/2">
-                                    <span className="bg-gradient-to-r from-blue-600 to-purple-600 text-white px-8 py-3 rounded-full text-base font-bold shadow-xl flex items-center gap-2">
-                                        <SparklesIcon className="w-5 h-5" />
+                            <div className="relative bg-white rounded-[2rem] sm:rounded-[2.5rem] p-6 sm:p-8 md:p-12 shadow-2xl border border-gray-100">
+                                <div className="absolute -top-5 sm:-top-6 left-1/2 -translate-x-1/2 w-max">
+                                    <span className="bg-gradient-to-r from-blue-600 to-purple-600 text-white px-6 sm:px-8 py-2 sm:py-3 rounded-full text-sm sm:text-base font-bold shadow-xl flex items-center gap-2">
+                                        <SparklesIcon className="w-4 h-4 sm:w-5 sm:h-5" />
                                         Most Popular
                                     </span>
                                 </div>

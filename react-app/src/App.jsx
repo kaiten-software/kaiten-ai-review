@@ -14,6 +14,10 @@ import ClientDashboard from './pages/ClientDashboard';
 import ClientOnboarding from './pages/ClientOnboarding';
 import CouponPage from './pages/CouponPage';
 import RedeemPage from './pages/RedeemPage';
+import FSRLogin from './pages/FSRLogin';
+import FSRDashboard from './pages/FSRDashboard';
+import RegisterBusiness from './pages/RegisterBusiness';
+import InstagramOfferPage from './pages/InstagramOfferPage';
 
 function AnimatedRoutes() {
   const location = useLocation();
@@ -31,10 +35,15 @@ function AnimatedRoutes() {
         <Route path="/redeem/:code" element={<RedeemPage />} />
         <Route path="/private-feedback" element={<PrivateFeedback />} />
         <Route path="/onboarding" element={<ClientOnboarding />} />
+        <Route path="/client-onboarding" element={<ClientOnboarding />} />
+        <Route path="/register-business" element={<RegisterBusiness />} />
         <Route path="/login" element={<Login />} />
         <Route path="/admin/login" element={<AdminLogin />} />
         <Route path="/admin/dashboard" element={<AdminDashboard />} />
         <Route path="/client/dashboard" element={<ClientDashboard />} />
+        <Route path="/fsr-login" element={<FSRLogin />} />
+        <Route path="/fsr-dashboard" element={<FSRDashboard />} />
+        <Route path="/instagram-offer/:businessId" element={<InstagramOfferPage />} />
       </Routes>
     </AnimatePresence>
   );

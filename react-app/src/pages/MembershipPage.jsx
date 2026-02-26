@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { CheckBadgeIcon, SparklesIcon, ArrowLeftIcon, ShieldCheckIcon, GiftIcon } from '@heroicons/react/24/solid';
-import { supabase, addReview } from '../lib/supabase';
+import { supabase, addReview, generateCoupon } from '../lib/supabase';
 import Footer from '../components/common/Footer';
 
 export default function MembershipPage() {
@@ -79,19 +79,45 @@ export default function MembershipPage() {
                     feelings: reviewData.feelings || [],
                     service_used: servicesList.join(', '),
                     staff_member: reviewData.staff || "",
-                    posted_to_google: true, // They are claiming a reward, implies positive flow? Or maybe false if "Private Feedback"?
-                    // Actually Membership is usually for High Rating flow ("Post with FREE Offers") or Low Rating "Claim Free Gift"
-                    // If high rating, posted_to_google might be intended?
-                    // But if they clicked "Post with Free Offers", they haven't actually posted on Google yet technically unless that button does both?
-                    // The button just navigates.
-                    // For now let's assume posted_to_google is true for Membership flow as it's often an incentive for posting.
-                    // Or keep it straightforward:
                     posted_to_google: true,
                     is_public: true
                 });
             }
 
 
+
+            // Generate a REAL coupon
+            const couponData = {
+                business_id: reviewData.businessId || 'pizza-corner',
+                business_name: reviewData.businessName,
+                code: `${(reviewData.businessName || 'BIZ').substring(0, 3).toUpperCase()}-${Math.floor(Math.random() * 10000)}`,
+                offer_title: "Review Reward", // Dynamic based on business type?
+                description: "Thank you for your feedback!",
+                source: 'review',
+                customer_details: {
+                    name: formData.name,
+                    email: formData.email,
+                    phone: formData.phone
+                },
+                expiry_date: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString()
+            };
+
+            const couponResult = await generateCoupon(couponData);
+
+            // Should be dynamic based on business type logic from CouponPage, 
+            // but for now we let CouponPage handle the "Offer Details" display relative to business,
+            // we just pass the CODE.
+            // Actually, better to pass the code to CouponPage.
+
+            if (couponResult.success) {
+                // Update session data with the specific code
+                const currentSession = JSON.parse(sessionStorage.getItem('reviewData') || '{}');
+                sessionStorage.setItem('reviewData', JSON.stringify({
+                    ...currentSession,
+                    couponCode: couponResult.data.code,
+                    source: 'review'
+                }));
+            }
 
             // Simulate "Processing" for effect
             await new Promise(resolve => setTimeout(resolve, 800));

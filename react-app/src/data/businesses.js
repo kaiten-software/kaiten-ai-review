@@ -353,39 +353,60 @@ export const businesses = {
 
     services: [
       {
-        name: 'Margherita Pizza',
+        name: 'Gourmet Pizza',
+        price: '₹450',
+        duration: '15-20 min',
+        image: 'https://images.unsplash.com/photo-1513104890138-7c749659a591?w=600&h=400&fit=crop',
+        description: 'Wood-fired, authentic Italian pizzas with fresh toppings.'
+      },
+      {
+        name: 'Handmade Pasta',
         price: '₹350',
         duration: '15 min',
-        image: 'https://images.unsplash.com/photo-1574071318508-1cdbab80d002?w=600&h=400&fit=crop',
-        description: 'Classic tomato & mozzarella'
+        image: 'https://images.unsplash.com/photo-1626844131082-256783844137?w=600&h=400&fit=crop',
+        description: 'Freshly made pasta with rich, creamy sauces.'
       },
       {
-        name: 'Pepperoni Pizza',
-        price: '₹450',
-        duration: '15 min',
-        image: 'https://images.unsplash.com/photo-1628840042765-356cda07504e?w=600&h=400&fit=crop',
-        description: 'Loaded with pepperoni'
+        name: 'Juicy Burgers',
+        price: '₹250',
+        duration: '10 min',
+        image: 'https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=600&h=400&fit=crop',
+        description: 'Grilled to perfection with premium cheese and veggies.'
       },
       {
-        name: 'Vegetarian Special',
-        price: '₹400',
-        duration: '15 min',
-        image: 'https://images.unsplash.com/photo-1571997478779-2adcbbe9ab2f?w=600&h=400&fit=crop',
-        description: 'Fresh veggies & herbs'
+        name: 'Signature Drinks',
+        price: '₹150',
+        duration: 'Instant',
+        image: 'https://images.unsplash.com/photo-1513558161293-cdaf765ed2fd?w=600&h=400&fit=crop',
+        description: 'Refreshing mojitos, shakes, and soft drinks.'
       },
       {
-        name: 'BBQ Chicken',
-        price: '₹500',
-        duration: '20 min',
-        image: 'https://images.unsplash.com/photo-1565299624946-b28f40a0ae38?w=600&h=400&fit=crop',
-        description: 'Smoky BBQ chicken'
+        name: 'Sweet Desserts',
+        price: '₹200',
+        duration: 'Ready',
+        image: 'https://images.unsplash.com/photo-1488477181946-6428a0291777?w=600&h=400&fit=crop',
+        description: 'Tiramisu, cheesecake, and chocolate lava cake.'
       },
       {
-        name: 'Family Combo',
-        price: '₹1200',
-        duration: '25 min',
-        image: 'https://images.unsplash.com/photo-1513104890138-7c749659a591?w=600&h=400&fit=crop',
-        description: '2 large pizzas + sides'
+        name: 'Fresh Wraps',
+        price: '₹180',
+        duration: '5 min',
+        image: 'https://images.unsplash.com/photo-1626700051175-6818013e1d4f?w=600&h=400&fit=crop',
+        description: 'Healthy and satisfying wraps with fresh ingredients.'
+      },
+      {
+        name: 'Green Salads',
+        price: '₹220',
+        duration: '10 min',
+        image: 'https://images.unsplash.com/photo-1512621776951-a57141f2eefd?w=600&h=400&fit=crop',
+        description: 'Locally sourced organic greens and dressings.'
+      },
+      {
+        name: 'Crispy Fries',
+        price: '₹120',
+        duration: '5 min',
+        image: 'https://images.unsplash.com/photo-1573080496219-bb080dd4f877?w=600&h=400&fit=crop',
+        description: 'Golden fried potatoes with signature seasoning.'
       }
     ],
 
@@ -1436,6 +1457,97 @@ export const businesses = {
 
     qualities: ['Tasty', 'Fast', 'Hot', 'Cheesy', 'Fresh', 'Crispy'],
     feelings: ['Full', 'Happy', 'Satisfied', 'Excited']
+  },
+  'sharma-electronics': {
+    id: 'sharma-electronics',
+    name: 'Sharma Electronics',
+    logo: '⚡',
+    tagline: 'Your Trusted Tech Partner',
+    description: 'Premier electronics retailer offering the latest gadgets, home appliances, and expert repair services.',
+    address: '12 Tech Park, MG Road, Bangalore, Karnataka 560001',
+    phone: '+91-9876543220',
+    email: '919876543220@example.com',
+    email: 'contact@sharmaelectronics.com',
+    rating: 4.6,
+    reviewCount: 320,
+    social_media_links: [
+      { platform: 'instagram', url: 'https://instagram.com/sharmaelectronics' },
+      { platform: 'facebook', url: 'https://facebook.com/sharmaelectronics' }
+    ],
+    google_business_url: 'https://search.google.com/local/writereview?placeid=ChIJUewm6BHXCDkRdClN6_t0Be4',
+    googlePlaceId: 'ChIJUewm6BHXCDkRdClN6_t0Be4',
+
+    hero: {
+      main: 'https://images.unsplash.com/photo-1550009158-9ebf69173e03?w=1920&h=1080&fit=crop',
+      overlay: 'linear-gradient(135deg, rgba(37, 99, 235, 0.8) 0%, rgba(30, 64, 175, 0.8) 100%)'
+    },
+
+    gallery: [
+      {
+        url: 'https://images.unsplash.com/photo-1593359677879-a4bb92f829d1?w=800&h=600&fit=crop',
+        title: 'TV Display Wall',
+        category: 'showroom'
+      },
+      {
+        url: 'https://images.unsplash.com/photo-1593642632823-8f78536788c6?w=800&h=600&fit=crop',
+        title: 'Laptop Section',
+        category: 'products'
+      },
+      {
+        url: 'https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?w=800&h=600&fit=crop',
+        title: 'Mobile Phones',
+        category: 'products'
+      },
+      {
+        url: 'https://images.unsplash.com/photo-1581092921461-eab62e97a782?w=800&h=600&fit=crop',
+        title: 'Service Center',
+        category: 'service'
+      }
+    ],
+
+    staff: [
+      {
+        name: 'Rahul Sharma',
+        role: 'Store Manager',
+        image: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=400&h=400&fit=crop',
+        experience: '12 years',
+        specialty: 'Home Entertainment'
+      },
+      {
+        name: 'Priya Verma',
+        role: 'Sales Lead',
+        image: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=400&h=400&fit=crop',
+        experience: '8 years',
+        specialty: 'Mobile Technology'
+      }
+    ],
+
+    services: [
+      {
+        name: 'Screen Repair',
+        price: '₹2500',
+        duration: '2 hours',
+        image: 'https://images.unsplash.com/photo-1597577424638-a2713214b7e9?w=600&h=400&fit=crop',
+        description: 'Professional screen replacement for all models'
+      },
+      {
+        name: 'Software Installation',
+        price: '₹500',
+        duration: '1 hour',
+        image: 'https://images.unsplash.com/photo-1588508065123-287b28e013da?w=600&h=400&fit=crop',
+        description: 'OS and application setup'
+      },
+      {
+        name: 'Gadget Consultation',
+        price: 'Free',
+        duration: '30 min',
+        image: 'https://images.unsplash.com/photo-1531297461136-82lw9z2895a?w=600&h=400&fit=crop',
+        description: 'Expert advice on new purchases'
+      }
+    ],
+
+    qualities: ['Expert', 'Genuine', 'Fast', 'Reliable', 'Helpful'],
+    feelings: ['Satisfied', 'Technically Enabled', 'Confident', 'Happy']
   }
 };
 
